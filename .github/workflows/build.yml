@@ -129,3 +129,19 @@ jobs:
             nm -g "$RUNNER_TEMP/rei-cross/$arch/native/kernel.o" |
               grep croissant_native_kernel_ts__tetoKernelInit
           done
+
+  raspi3b-qemu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ARM64 bare-metal emulator and toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-system-arm llvm lld
+
+      - name: Boot Rei's generated Thistle smoke under Raspberry Pi 3B
+        env:
+          REI_QEMU_TIMEOUT: '8'
+        run: bash scripts/qemu-raspi3b-smoke.sh
