@@ -15,6 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify pinned source revisions and build scripts
+        run: |
+          bash -n scripts/verify-pins.sh scripts/regenerate.sh
+          bash scripts/verify-pins.sh
+
       - name: Verify generated artefacts
         run: sha256sum -c SHA256SUMS
 
