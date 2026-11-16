@@ -1,0 +1,48 @@
+name: Rei native build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify generated artefacts
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile with CMake
+        run: |
+          cmake -S . -B build
+          cmake --build build --parallel
+
+      - name: Verify kernel symbol
+        run: |
+          nm -g build/CMakeFiles/rei_kernel.dir/src/native/kernel.c.o |
+            grep croissant_native_kernel_ts__tetoKernelInit
+
+      - name: Compile both bare-metal architectures
+        shell: bash
+        run: |
+          set -euo pipefail
+          for arch in x86_64 aarch64; do
+            case "$arch" in
+              x86_64) triple=x86_64-unknown-none-elf ;;
+              aarch64) triple=aarch64-none-elf ;;
+            esac
+            while IFS= read -r -d '' source; do
+              relative="${source#src/}"
+              output="build/cross/$arch/${relative%.c}.o"
+              mkdir -p "$(dirname "$output")"
+              clang --target="$triple" -std=c11 -O1 \
+                -ffreestanding -fno-builtin -fno-stack-protector \
+                -Werror -Iinclude -c "$source" -o "$output"
+            done < <(find src -type f -name '*.c' -print0)
+          done
