@@ -1,30 +1,36 @@
 # Architecture
 
-Rei is the native execution target for canonical Thistle.
+Rei is the native execution target for the canonical Thistle kernel.
 
-    Thistle
-       |
-      Bake (clang target)
-       |
-    Croissant
-       |
-    C source and headers
-       |
-    GCC / Clang
-       |
-    Native relocatable objects
-       |
-    Native intrinsics and platform layer (pending)
-       |
-    Linker and boot entry (pending)
-       |
-    Rei
+```text
+thistle/ (pinned canonical TypeScript)
+  |
+bake/ --target=clang (pinned lowering)
+  |
+croissant/ (pinned compiler)
+  |
+src/ and include/ (generated, committed snapshots)
+  |
+GCC / Clang
+  |
+dist/ (native relocatable objects)
+  |
+native intrinsics, platform integration and linker (not yet implemented)
+  |
+Rei executable (not yet bootable)
+```
 
-The kernel implementation belongs to Thistle. Rei does not maintain
-an independent implementation of the kernel.
+Thistle owns the kernel implementation. Rei must never keep an
+independently edited C equivalent of that implementation. Croissant
+generates one C source and a corresponding header per lowered module.
+The include path `include/croissant/` names the generator's ABI/header
+namespace; the actual compiler checkout is the Git submodule
+`croissant/`.
 
-The files in src/ and include/ are committed generated snapshots.
-They must be regenerated from canonical source, not independently edited.
+The three Git submodule gitlinks pin exactly the source revisions used
+for this snapshot. The revisions are recorded in
+[provenance.md](provenance.md) and verified by
+`scripts/verify-pins.sh` during CI.
 
-The native platform layer, boot implementation and linker configuration
-will belong to Rei.
+The native platform layer, boot entry and linker scripts will belong
+to Rei itself. They are distinct from generated Thistle kernel modules.

@@ -3,44 +3,55 @@
 **REI** stands for **Rei Executes Independently**.
 
 Rei is the native, freestanding execution target for the canonical
-Thistle kernel.
+Thistle kernel. The kernel remains implemented in Thistle, not in an
+independently maintained C fork.
 
-## Architecture
+## Toolchain
 
-Thistle provides the kernel implementation. Bake lowers the canonical
-TypeScript into a C-compatible intermediate form. Croissant translates
-that into modular C sources and headers. GCC or Clang compiles these
-into native machine-code objects.
+The upstream repositories are Git submodules, pinned to the exact revisions
+used to produce the committed generated source and native objects:
 
-Rei will provide the native platform integration, runtime intrinsics,
-linker configuration and architecture-specific boot implementation.
+| Submodule | Purpose |
+|---|---|
+| `thistle/` | Canonical TypeScript kernel source |
+| `bake/` | Lower Thistle for the native Clang target |
+| `croissant/` | Convert Bake output into modular, freestanding C |
 
-No separately maintained kernel implementation is permitted.
+The headers under `include/croissant/` are **generated C declarations**,
+not Croissant's compiler source. The compiler itself is checked out in the
+separate, pinned `croissant/` submodule.
 
-## Repository
+## Repository layout
 
-- `src/`: Croissant-generated C kernel implementation.
-- `include/`: Generated C headers and native ABI declarations.
-- `dist/`: GCC and Clang native compilation artefacts.
-- `docs/`: Architecture and source provenance.
-- `croissant.manifest.json`: Generated module manifest.
+- `src/`: Croissant-generated C kernel source, divided by module.
+- `include/`: Croissant-generated C headers and ABI declarations.
+- `dist/`: Captured GCC and Clang relocatable ELF objects.
+- `docs/`: Architecture, source provenance and build instructions.
+- `scripts/`: Provenance checks and regeneration.
+- `croissant.manifest.json`: Mapping of Bake modules to generated C files.
+- `thistle/`, `bake/`, `croissant/`: Pinned upstream sources.
 
-The generated source is committed as an initial reproducible snapshot.
-It is not independently maintained source code.
+The generated C and binaries are committed development snapshots. They must
+not become an independent source of truth.
 
 ## Build
 
-    cmake -S . -B build
-    cmake --build build --parallel
+```sh
+git submodule update --init --recursive
+cmake -S . -B build
+cmake --build build --parallel
+bash scripts/verify-pins.sh
+```
 
-## Current status
+To regenerate the source, manifest, and native object snapshots from the
+pinned dependencies, see [Building Rei](docs/build.md).
 
-The complete canonical Thistle native source compiles into separate
-C translation units.
+## Status
 
-GCC and Clang have produced relocatable native ELF objects.
+Rei currently compiles the canonical Thistle kernel to separate C
+translation units and native relocatable ELF objects on x86-64 and ARM64.
+The native intrinsic ABI and platform linker/boot integration remain
+unimplemented. Rei is **not** linked or bootable yet.
 
-Native runtime intrinsics remain unresolved. Rei cannot yet be linked
-into a standalone executable or booted on hardware.
-
-The next milestone is implementing and testing the native intrinsic ABI.
+The immediate milestone is implementing and validating those native
+intrinsics before introducing a freestanding platform entry point.
