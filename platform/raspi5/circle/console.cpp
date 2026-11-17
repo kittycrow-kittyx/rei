@@ -16,6 +16,10 @@
 #include <SDCard/emmc.h>
 #include "console.h"
 #include "storage.h"
+#ifdef REI_ROOT_SD
+#include <fatfs/ff.h>
+static_assert(FF_FS_READONLY == 1, "SD root must be read-only");
+#endif
 
 extern "C" void rei_native_start(void);
 
@@ -29,6 +33,15 @@ CSerialDevice *serial;
 CUSBHCIDevice *usb;
 CEMMCDevice *sd;
 bool sd_ready;
+bool sd_attempted;
+
+bool initialise_sd() {
+    if (!sd_attempted) {
+        sd_attempted = true;
+        sd_ready = sd && sd->Initialize();
+    }
+    return sd_ready;
+}
 
 void key_pressed(const char *text) {
     while (*text) {
@@ -139,11 +152,10 @@ extern "C" int rei_sd_read_sector(uint64_t sector, void *buffer) {
 
 static void probe_sd(void) {
     rei_console_puts("REI: SD PROBE START\n");
-    if (!sd || !sd->Initialize()) {
+    if (!initialise_sd()) {
         rei_console_puts("REI: SD UNAVAILABLE\n");
         return;
     }
-    sd_ready = true;
     rei_console_puts("REI: SD CAPACITY BYTES ");
     rei_console_number(rei_sd_capacity());
     rei_console_char('\n');
@@ -162,6 +174,53 @@ static void probe_sd(void) {
     rei_console_puts(first[510] == 0x55 && first[511] == 0xaa
         ? "REI: SD BOOT SIGNATURE 55AA\n" : "REI: SD NO 55AA BOOT SIGNATURE\n");
 }
+
+#ifdef REI_ROOT_SD
+namespace {
+FATFS root_fs;
+FIL root_file;
+bool root_open;
+constexpr char RootDrive[] = "SD:";
+constexpr char RootPath[] = "SD:/root.vfs";
+}
+
+extern "C" int rei_sd_root_open(uint32_t *size) {
+    if (!size || root_open || !initialise_sd()) return -1;
+    if (f_mount(&root_fs, RootDrive, 1) != FR_OK) {
+        f_unmount(RootDrive);
+        return -1;
+    }
+    if (f_open(&root_file, RootPath, FA_READ | FA_OPEN_EXISTING) != FR_OK) {
+        f_unmount(RootDrive);
+        return -1;
+    }
+    const auto length = f_size(&root_file);
+    if (length == 0 || length > 16u * 1024u * 1024u) {
+        f_close(&root_file);
+        f_unmount(RootDrive);
+        return -1;
+    }
+    *size = static_cast<uint32_t>(length);
+    root_open = true;
+    return 0;
+}
+
+extern "C" int rei_sd_root_read(void *buffer, uint32_t length) {
+    if (!root_open || !buffer || !length || length > 4096) return -1;
+    UINT actual = 0;
+    if (f_read(&root_file, buffer, length, &actual) != FR_OK || actual != length)
+        return -1;
+    return 0;
+}
+
+extern "C" int rei_sd_root_close(void) {
+    if (!root_open) return -1;
+    const auto closed = f_close(&root_file);
+    const auto unmounted = f_unmount(RootDrive);
+    root_open = false;
+    return closed == FR_OK && unmounted == FR_OK ? 0 : -1;
+}
+#endif
 
 extern "C" void rei_console_idle(void) {
     probe_sd();

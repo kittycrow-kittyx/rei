@@ -4,6 +4,12 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 repo="$PWD"
 root="$(realpath "${1:?Usage: $0 ROOT.vfs}")"
 test -s "$root"
+source_mode="${2:-embedded}"
+case "$source_mode" in
+  embedded) board=raspi5-circle; root_define=; fatfs= ;;
+  sd) board=raspi5-circle-sd; root_define=-DREI_ROOT_SD; fatfs=addon/fatfs ;;
+  *) echo "Root source must be embedded or sd" >&2; exit 2 ;;
+esac
 prefix="${PREFIX64:-aarch64-none-elf-}"
 jobs="${REI_JOBS:-2}"
 [[ "$jobs" =~ ^[1-4]$ ]] || { echo "REI_JOBS must be 1 to 4" >&2; exit 2; }
@@ -32,36 +38,48 @@ STDLIB_SUPPORT = 1
 DEFINE += -DKERNEL_MAX_SIZE=16777216 -DDEFAULT_KEYMAP=\"UK\"
 EOF
 
-for library in lib lib/usb lib/input lib/fs addon/SDCard; do
+if [[ "$source_mode" == sd ]]; then
+  # Configure only the cached Circle build copy, not the submodule.
+  sed -i 's/^#define FF_FS_READONLY[[:space:]]*0$/#define FF_FS_READONLY 1/' "$circle/addon/fatfs/ffconf.h"
+  grep -Eq '^#define FF_FS_READONLY[[:space:]]+1$' "$circle/addon/fatfs/ffconf.h"
+fi
+for library in lib lib/usb lib/input lib/fs addon/SDCard $fatfs; do
   nice -n 10 make -C "$circle/$library" -j "$jobs"
 done
 
 bash scripts/generate-native.sh
 generated="$repo/build/native-generated"
-out="$repo/build/native/raspi5-circle"
+out="$repo/build/native/$board"
 mkdir -p "$out"
 if [[ "$root" != "$out/root.vfs" ]]; then cp "$root" "$out/root.vfs"; fi
 cp platform/raspi5/circle/console.cpp platform/raspi5/circle/storage.h "$out/"
-printf '.section .rodata.root,"a"\n.global rei_root_start,rei_root_end\n.balign 16\nrei_root_start:\n.incbin "root.vfs"\nrei_root_end:\n' > "$out/root.S"
+if [[ "$source_mode" == embedded ]]; then
+  printf '.section .rodata.root,"a"\n.global rei_root_start,rei_root_end\n.balign 16\nrei_root_start:\n.incbin "root.vfs"\nrei_root_end:\n' > "$out/root.S"
+else
+  printf '.section .rodata.root,"a"\n.global rei_root_start,rei_root_end\n.balign 16\nrei_root_start:\nrei_root_end:\n' > "$out/root.S"
+fi
 flags=(--target=aarch64-none-elf -mcpu=cortex-a76 -DREI_PI5 -DREI_CIRCLE -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-outline-atomics -mstrict-align)
+if [[ -n "$root_define" ]]; then flags+=("$root_define"); fi
 objects=(console.o root.o)
 while IFS= read -r -d '' source; do
   relative="${source#"$generated"/}"
   object="rei/${relative%.*}.o"
   mkdir -p "$out/$(dirname "$object")"
-  nice -n 10 clang "${flags[@]}" -I"$generated/include" -I"$repo/platform/arm64" -c "$source" -o "$out/$object"
+  nice -n 10 clang "${flags[@]}" -I"$generated/include" -I"$repo/platform/arm64" -I"$repo/platform/raspi5/circle" -c "$source" -o "$out/$object"
   objects+=("$object")
 done < <(find "$generated/src" -type f -name '*.c' -print0 | sort -z; printf '%s\0' runtime/arm64/intrinsics.c platform/arm64/entry.c)
 rm -f "$out/console.o" "$out/root.o"
+fatfs_lib=
+if [[ "$source_mode" == sd ]]; then fatfs_lib="$circle/addon/fatfs/libfatfs.a"; fi
 nice -n 10 make -C "$out" -f "$repo/platform/raspi5/circle/Makefile" \
-  CIRCLEHOME="$circle" EXTRAINCLUDE="-I$repo/platform/arm64" \
-  OBJS="${objects[*]}" TARGET=rei-raspi5-circle -j "$jobs" rei-raspi5-circle.img
+  CIRCLEHOME="$circle" EXTRAINCLUDE="-I$repo/platform/arm64 $root_define" \
+  REI_FATFS_LIB="$fatfs_lib" OBJS="${objects[*]}" TARGET="rei-$board" -j "$jobs" "rei-$board.img"
 
-end="$("${prefix}nm" "$out/rei-raspi5-circle.elf" | awk '$3 == "_end" {print $1}')"
+end="$("${prefix}nm" "$out/rei-$board.elf" | awk '$3 == "_end" {print $1}')"
 [[ "$end" =~ ^[0-9a-fA-F]+$ ]] && (( 16#$end <= 0x80000 + 16777216 )) || {
   echo "Circle kernel exceeds reserved image memory" >&2; exit 1;
 }
 cp "$generated/revisions.txt" "$out/revisions.txt"
-printf 'circle %s\n' "$pinned" >> "$out/revisions.txt"
-(cd "$out"; sha256sum rei-raspi5-circle.img rei-raspi5-circle.elf root.vfs revisions.txt > SHA256SUMS)
-echo "Circle-backed Pi 5 image: $out/rei-raspi5-circle.img"
+printf 'circle %s\nroot-source %s\n' "$pinned" "$source_mode" >> "$out/revisions.txt"
+(cd "$out"; sha256sum rei-$board.img rei-$board.elf root.vfs revisions.txt > SHA256SUMS)
+echo "Circle-backed Pi 5 image: $out/rei-$board.img"

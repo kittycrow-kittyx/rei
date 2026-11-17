@@ -1,5 +1,8 @@
 #include "croissant/all.h"
 #include "console.h"
+#ifdef REI_ROOT_SD
+#include "storage.h"
+#endif
 extern const uint8_t rei_root_start[], rei_root_end[];
 #define K(name) croissant_native_kernel_ts__##name
 #define M(name) croissant_native_memory_ts__##name
@@ -106,11 +109,36 @@ void rei_native_start(void){
     status(K(tetoKernelInit)(memory,1,false),"REI: KERNEL INIT FAILED");
     require(K(tetoKernelValid)(memory),"REI: KERNEL VALIDATION FAILED\n");
     rei_console_puts("REI: CANONICAL KERNEL INIT PASS\n");
+#ifdef REI_ROOT_SD
+    uint32_t size = 0;
+    rei_console_puts("REI: LOADING SD ROOT.VFS\n");
+    require(rei_sd_root_open(&size) == 0, "REI: SD ROOT OPEN FAILED\n");
+    uint32_t at = K(tetoImageReserve)(memory, size);
+    if (at == UINT32_MAX) {
+        rei_sd_root_close();
+        rei_panic("REI: ROOT RESERVE FAILED\n");
+    }
+    uint8_t chunk[4096];
+    for (uint32_t offset = 0; offset < size;) {
+        uint32_t remaining = size - offset;
+        uint32_t length = remaining < sizeof chunk ? remaining : sizeof chunk;
+        if (rei_sd_root_read(chunk, length) != 0) {
+            rei_sd_root_close();
+            rei_panic("REI: SD ROOT READ FAILED\n");
+        }
+        copy_bytes(memory, at + offset, chunk, length);
+        offset += length;
+        rei_console_poll();
+    }
+    require(rei_sd_root_close() == 0, "REI: SD ROOT CLOSE FAILED\n");
+    rei_console_puts("REI: SD ROOT READ PASS\n");
+#else
     size_t size=(uintptr_t)rei_root_end-(uintptr_t)rei_root_start;
     require(size>0&&size<=16u*1024*1024,"REI: EMBEDDED ROOT SIZE INVALID\n");
     uint32_t at=K(tetoImageReserve)(memory,(uint32_t)size);
     require(at!=UINT32_MAX,"REI: ROOT RESERVE FAILED\n");
     copy_bytes(memory,at,rei_root_start,(uint32_t)size);
+#endif
     status(V(tetoLoadVfs)(memory,at,(uint32_t)size),"REI: ROOT MOUNT FAILED");
     status(K(tetoImageRelease)(memory,at,(uint32_t)size),"REI: ROOT RELEASE FAILED");
     require(V(tetoVfsLoaded)(memory),"REI: ROOT NOT MOUNTED\n");

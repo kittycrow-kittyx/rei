@@ -45,3 +45,22 @@ guest stdin requires a canonical Thistle change.
 Circle is GPL-3.0 licensed. Review applicable licence obligations before
 distributing linked images. This build and physical hardware path are
 not yet tested.
+
+## Root on the SD card
+
+The optional SD-root build uses Circle's FatFs add-on in read-only mode:
+
+    REI_JOBS=2 nice -n 10 bash scripts/build-raspi5-circle.sh /absolute/path/root.vfs sd
+
+The output is build/native/raspi5-circle-sd/rei-raspi5-circle-sd.img.
+Copy root.vfs to the root of the onboard SD card's FAT boot volume and
+select this kernel image in config.txt. This variant does not embed the
+root archive. It opens SD:/root.vfs, reads it in bounded chunks and
+passes the image to canonical Thistle for VFS loading. It stops if the
+file is missing, exceeds 16 MiB, cannot be read or fails kernel VFS
+validation. It never falls back to an embedded root.
+
+Expected new output is REI: SD ROOT READ PASS followed by the canonical
+root mount and hello checks. The FAT reader cannot write to media. This
+is not a persistent writable guest filesystem, and the SD-root path
+requires physical testing. The original embedded-root build is retained.

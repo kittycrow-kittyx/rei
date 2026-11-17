@@ -12,6 +12,12 @@ extern "C" {
 uint64_t rei_sd_capacity(void);
 /* Buffer must hold 512 bytes. Returns zero on success, -1 on failure. */
 int rei_sd_read_sector(uint64_t sector, void *buffer);
+#ifdef REI_ROOT_SD
+/* Load root.vfs from the onboard SD FAT volume; no write interface. */
+int rei_sd_root_open(uint32_t *size);
+int rei_sd_root_read(void *buffer, uint32_t length);
+int rei_sd_root_close(void);
+#endif
 #ifdef __cplusplus
 }
 #endif
