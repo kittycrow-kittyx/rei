@@ -144,4 +144,11 @@ jobs:
       - name: Boot Rei's generated Thistle smoke under Raspberry Pi 3B
         env:
           REI_QEMU_TIMEOUT: '8'
-        run: bash scripts/qemu-raspi3b-smoke.sh
+        run: bash scripts/qemu-raspi3b-smoke.sh </dev/null > build-smoke.log 2>&1 || { cat build-smoke.log; exit 1; }
+
+      - name: Verify redirected test captured guest UART
+        run: |
+          cat build-smoke.log
+          grep -F 'REI: THISTLE GENERATED CORE PASS' build/qemu/raspi3b/serial.log
+          bash scripts/qemu-raspi3b-smoke.sh --build-only
+

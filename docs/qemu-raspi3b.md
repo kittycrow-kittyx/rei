@@ -56,3 +56,8 @@ Croissant-generated kernel under `src/`.
 
 Subsequent work will implement a native memory/intrinsic runtime and
 link enough canonical Thistle code to invoke kernel initialisation.
+
+To compile the image without starting QEMU, use
+`bash scripts/qemu-raspi3b-smoke.sh --build-only`. The smoke test captures
+UART bytes directly in `serial.log` and emulator diagnostics in `qemu.log`.
+It does not depend on an interactive terminal.

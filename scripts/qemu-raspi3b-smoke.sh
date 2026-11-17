@@ -5,7 +5,16 @@ set -euo pipefail
 # function. This is deliberately not described as a full kernel boot.
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-for command in clang ld.lld llvm-objcopy qemu-system-aarch64 timeout grep; do
+case "${1:-}" in
+  "") build_only=false ;;
+  --build-only) build_only=true ;;
+  *) echo "Usage: $0 [--build-only]" >&2; exit 2 ;;
+esac
+commands=(clang ld.lld llvm-objcopy)
+if ! $build_only; then
+  commands+=(qemu-system-aarch64 timeout grep)
+fi
+for command in "${commands[@]}"; do
   if ! command -v "$command" >/dev/null; then
     echo "Missing required command: $command" >&2
     exit 2
@@ -37,6 +46,15 @@ llvm-objcopy -O binary "$out/kernel8.elf" "$out/kernel8.img"
 
 echo "AArch64 Raspberry Pi 3B smoke image: $out/kernel8.img"
 
+if $build_only; then
+  exit 0
+fi
+
+# A file-backed UART is independent of the invoking shell's terminal.
+# Keep QEMU diagnostics separate from bytes sent by the guest.
+: > "$out/serial.log"
+: > "$out/qemu.log"
+
 set +e
 timeout -s TERM -k 2s "$qemu_seconds"s \
   qemu-system-aarch64 \
@@ -44,19 +62,20 @@ timeout -s TERM -k 2s "$qemu_seconds"s \
     -accel tcg,thread=single \
     -display none \
     -monitor none \
-    -serial stdio \
+    -serial "file:$out/serial.log" \
     -kernel "$out/kernel8.img" \
-    > "$out/serial.log" 2>&1
+    </dev/null > "$out/qemu.log" 2>&1
 status=$?
 set -e
 
 cat "$out/serial.log"
+cat "$out/qemu.log" >&2
 if (( status != 0 && status != 124 )); then
   echo "QEMU exited unexpectedly with status $status" >&2
   exit 1
 fi
 grep -Fq 'REI: RASPI3B AARCH64 BOOT' "$out/serial.log" || {
-  echo "Raspberry Pi 3B UART boot marker missing" >&2
+  echo "Raspberry Pi 3B UART boot marker missing (QEMU status $status; see $out/serial.log and $out/qemu.log)" >&2
   exit 1
 }
 grep -Fq 'REI: THISTLE GENERATED CORE PASS' "$out/serial.log" || {
