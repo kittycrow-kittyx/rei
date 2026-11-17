@@ -21,7 +21,7 @@ To compile the currently committed C without regenerating it:
 
 ```sh
 cmake -S . -B build
-cmake --build build --parallel
+cmake --build build --parallel 2
 ```
 
 To regenerate from the pinned TypeScript source, use:
@@ -39,9 +39,8 @@ Run it on a clean working tree. Review all generated changes before
 committing them. Submodule updates and regenerated outputs should be
 reviewed together.
 
-## Current boundary
+## Build boundary
 
-The build produces relocatable object files, not a linked Rei image.
-`__bake_c_*` and `croissant_js_*` calls still require a native
-runtime implementation, followed by architecture-specific platform
-integration and linking.
+Main produces the platform-independent C kernel and relocatable objects.
+The declared native intrinsic ABI is implemented by consumers on their
+platform branches. Main contains no hardware drivers or boot tests.

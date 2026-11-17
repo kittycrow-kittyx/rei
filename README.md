@@ -39,33 +39,16 @@ not become an independent source of truth.
 ```sh
 git submodule update --init --recursive
 cmake -S . -B build
-cmake --build build --parallel
+cmake --build build --parallel 2
 bash scripts/verify-pins.sh
 ```
 
 To regenerate the source, manifest, and native object snapshots from the
 pinned dependencies, see [Building Rei](docs/build.md).
 
-## ARM64 Raspberry Pi emulation
+## Scope
 
-Rei has a bounded QEMU `raspi3b` smoke test which boots an AArch64
-`kernel8.img`, initialises the Raspberry Pi PL011 UART and executes
-a Croissant-generated function from the canonical Thistle source.
-
-```sh
-bash scripts/qemu-raspi3b-smoke.sh
-```
-
-The test stops QEMU automatically and verifies serial output. See
-[QEMU Raspberry Pi 3B smoke test](docs/qemu-raspi3b.md) for prerequisites,
-the exact hardware model and what this milestone does **not** prove.
-
-## Status
-
-Rei currently compiles the canonical Thistle kernel to separate C
-translation units and native relocatable ELF objects on x86-64 and ARM64.
-The native intrinsic ABI and platform linker/boot integration remain
-unimplemented. Rei is **not** linked or bootable yet.
-
-The immediate milestone is implementing and validating those native
-intrinsics before introducing a freestanding platform entry point.
+Main contains the platform-independent generated C kernel, declarations,
+build tooling and compile-only checks. Hardware startup, drivers,
+platform runtimes, linked boot images and board-specific tests belong
+on hardware branches. The kernel source of truth is Thistle.
