@@ -21,3 +21,9 @@ required by the sole generated call, whose C cast otherwise loses a
 negative result. The compiler needs general fixes for these semantics.
 The host bridge supports stdout and stderr writes only. Guest input,
 entropy, networking, persistence and a shell are not implemented.
+
+Rei is a compilation target of Thistle, not an independently maintained
+kernel. Kernel semantics and fixes belong in Thistle; lowering and native
+representation fixes belong in Bake/Croissant. Rei owns hardware startup,
+linking and the native platform bridge. The early ARM64 path uses strict
+alignment because it runs before memory translation is enabled.

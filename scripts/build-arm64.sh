@@ -13,7 +13,7 @@ out="build/native/$board"
 mkdir -p "$out"
 if [[ "$(realpath "$root")" != "$(realpath "$out/root.vfs")" ]]; then cp "$root" "$out/root.vfs"; fi
 printf '.section .rodata.root,"a"\n.global rei_root_start,rei_root_end\n.balign 16\nrei_root_start:\n.incbin "root.vfs"\nrei_root_end:\n' > "$out/root.S"
-flags=(--target=aarch64-none-elf "${target[@]}" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-outline-atomics -fdata-sections -ffunction-sections)
+flags=(--target=aarch64-none-elf "${target[@]}" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-outline-atomics -mstrict-align -fdata-sections -ffunction-sections)
 objects=()
 while IFS= read -r -d '' source; do
   object="$out/${source%.*}.o"

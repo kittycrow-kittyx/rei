@@ -12,7 +12,8 @@ cat "$out/serial.log"
 cat "$out/qemu.log"
 head -n 80 "$out/exception.log"
 if ! grep -Fq "REI: CANONICAL KERNEL INIT PASS" "$out/serial.log"; then
-  llvm-objdump -d "$out/rei-raspi3b.elf" | grep -A 18 -m 1 "<croissant_init_globals>:" || true
+  llvm-objdump -d "$out/rei-raspi3b.elf" > "$out/disassembly.log"
+  grep -A 18 -m 1 "<croissant_init_globals>:" "$out/disassembly.log" || true
 fi
 test "$s" = 124 || test "$s" = 0
 grep -F 'REI: CANONICAL KERNEL INIT PASS' "$out/serial.log"
