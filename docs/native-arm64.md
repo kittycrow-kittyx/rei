@@ -39,3 +39,6 @@ Circle provides bare-metal screen, USB HID and supporting hardware services.
 It is GPL-3.0 licensed; distributing a linked image requires compliance
 with the applicable GPL terms. The direct UART build remains independent
 of Circle.
+
+The optional [Circle hardware build](pi5-circle.md) uses HDMI and USB HID.
+The original UART-only build still has neither driver.

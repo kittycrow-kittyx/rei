@@ -2,7 +2,16 @@
 #include "croissant/intrinsics.h"
 #define POOL_SIZE (80u * 1024u * 1024u)
 #define MAX_BUFFERS 64u
+#ifdef REI_CIRCLE
+/* Circle reserves physical memory for the framebuffer, PCIe and USB DMA. */
+extern void *rei_platform_allocate(size_t size);
+static uint8_t *arena;
+#define memset rei_memset
+#define memcpy rei_memcpy
+#define memmove rei_memmove
+#else
 static uint8_t arena[POOL_SIZE] __attribute__((aligned(16), section(".arena")));
+#endif
 typedef struct { size_t offset, size; } Allocation;
 static Allocation allocations[MAX_BUFFERS];
 static size_t used, count;
@@ -38,6 +47,12 @@ static uint8_t *at(__bake_c_Buffer b, double offset, size_t n) {
 __bake_c_Buffer __bake_c_new_buffer(double size) {
     if (!(size >= 0 && size <= POOL_SIZE) || count == MAX_BUFFERS) __bake_c_abort_range();
     size_t length = (size_t)size;
+#ifdef REI_CIRCLE
+    if (!arena) {
+        arena = rei_platform_allocate(POOL_SIZE);
+        if (!arena || ((uintptr_t)arena & 15u)) __bake_c_abort_range();
+    }
+#endif
     if ((double)length != size) __bake_c_abort_range();
     size_t offset = (used + 15u) & ~(size_t)15u;
     if (offset > POOL_SIZE || length > POOL_SIZE - offset) __bake_c_abort_range();

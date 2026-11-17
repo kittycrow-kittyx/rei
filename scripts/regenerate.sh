@@ -36,7 +36,7 @@ node croissant/dist/src/cli.js \
   --out-dir build/croissant-output
 
 # Only files declared by the old generated manifest may be deleted.
-# Preserve future, separately maintained Rei platform code in src/.
+# Only the compiler owns the generated kernel tree.
 node --input-type=module - build/croissant-output <<'NODE'
 import fs from "node:fs";
 import path from "node:path";

@@ -15,9 +15,7 @@ GCC / Clang
   |
 dist/ (native relocatable objects)
   |
-native intrinsics, platform integration and linker (not yet implemented)
-  |
-Rei executable (not yet bootable)
+platform-independent kernel build boundary
 ```
 
 Thistle owns the kernel implementation. Rei must never keep an
@@ -32,5 +30,6 @@ for this snapshot. The revisions are recorded in
 [provenance.md](provenance.md) and verified by
 `scripts/verify-pins.sh` during CI.
 
-The native platform layer, boot entry and linker scripts will belong
-to Rei itself. They are distinct from generated Thistle kernel modules.
+Main ends at the generated C kernel and its relocatable objects.
+Platform branches provide native intrinsic implementations, hardware
+startup, drivers and linking without editing the generated kernel.

@@ -31,3 +31,11 @@ __attribute__((noreturn)) void rei_exception(uint64_t esr, uint64_t elr, uint64_
     rei_panic("\n");
     for (;;) __asm__ volatile("wfe");
 }
+
+int rei_console_read(void) {
+    if (*reg(0x18) & (1u << 4)) return -1;
+    uint32_t data = *reg(0);
+    return (data & 0xf00u) ? -1 : (int)(data & 0xffu);
+}
+void rei_console_poll(void) {}
+void rei_console_idle(void) { for (;;) __asm__ volatile("wfe"); }

@@ -60,6 +60,7 @@ static void run_hello(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
     status(K(tetoImageRelease)(mem,start,startupLen),"REI: STARTUP RELEASE FAILED");
     bool wrote = false;
     for(unsigned batch=0;batch<1024;batch++){
+        rei_console_poll();
         uint64_t tick, freq;
         __asm__ volatile("mrs %0, cntpct_el0":"=r"(tick));
         __asm__ volatile("mrs %0, cntfrq_el0":"=r"(freq));
@@ -116,5 +117,6 @@ void rei_native_start(void){
     rei_console_puts("REI: MIKUOS ROOT MOUNT PASS\n");
     rei_console_puts("REI: VFS INODES ");rei_console_number(V(tetoVfsInodeCount)(memory));rei_console_puts("\n");
     run_hello(memory,V(tetoVfsRoot)(memory));
+    rei_console_idle();
     for(;;)__asm__ volatile("wfe");
 }
