@@ -1,0 +1,8 @@
+circle 7a81e1b480fe7d19fc1fc695b89bff0a0848f44b
+configuration pi5-16m-v4
+architecture aarch64
+board raspi5
+gcc 14.3.1
+target aarch64-none-elf
+config a135445171407dfcae13b910bc280abc8f20c1771573f57c1138e08e6ec70222
+fatfs 849b40b99ffb7c291a3236cfd1afd73200366dd907b3ed94e08b7f8338aa8d72
