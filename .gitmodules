@@ -4,6 +4,6 @@
 [submodule "bake"]
 	path = bake
 	url = https://github.com/kitty-crow/bake.git
-[submodule "croissant"]
-	path = croissant
-	url = https://github.com/kitty-crow/croissant.git
+[submodule "crust"]
+	path = crust
+	url = https://github.com/kitty-crow/crust.git

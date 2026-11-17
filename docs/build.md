@@ -1,47 +1,16 @@
-# Building Rei
+# Building Rusty Rei
 
-## Pinned dependencies
-
-After cloning Rei, initialise its Git submodules:
+Install Git, Bun, Node.js, npm and Rustup. Access to Crust is required.
 
 ```sh
 git submodule update --init --recursive
-bash scripts/verify-pins.sh
-```
-
-`thistle/`, `bake/` and `croissant/` are pinned to the precise Git
-revisions that produced the initial generated snapshot. Upstream `main`
-moving must not silently change a Rei build. Access to the private
-Croissant repository is required to initialise that submodule.
-
-## Rebuild committed C
-
-The existing generated sources and native objects are build snapshots.
-To compile the currently committed C without regenerating it:
-
-```sh
-cmake -S . -B build
-cmake --build build --parallel
-```
-
-To regenerate from the pinned TypeScript source, use:
-
-```sh
+rustup target add x86_64-unknown-none aarch64-unknown-none
 bash scripts/regenerate.sh
+bash scripts/build.sh
 ```
 
-The regeneration script builds Bake and Croissant, performs
-`Bake --target=clang --engine=host`, emits a modular C tree, refreshes
-only previously generated `src/` and `include/` files, recompiles
-the native objects and updates the snapshot checksums.
+The generation step calls Bake's shared native lowering with the Rust target and passes the resulting manifest to Crust. Generated Rust files, Cargo.toml and crust.manifest.json are copied to the repository root. Review and commit these generated files as a snapshot when updating the pins.
 
-Run it on a clean working tree. Review all generated changes before
-committing them. Submodule updates and regenerated outputs should be
-reviewed together.
+The build script compiles both targets at reduced process priority with two jobs and warnings denied. It can also compile either target individually by accepting its target triple.
 
-## Current boundary
-
-The build produces relocatable object files, not a linked Rei image.
-`__bake_c_*` and `croissant_js_*` calls still require a native
-runtime implementation, followed by architecture-specific platform
-integration and linking.
+The generated crate is built without the standard library and forbids unsafe Rust. Its platform intrinsics are abstract; no board, boot code or image layout is specified here. Native libraries can be linked by downstream platform implementations. Generic kernel functions require a concrete Platform implementation before final executable code is produced.
