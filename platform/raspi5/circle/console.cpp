@@ -33,6 +33,7 @@ CUSBHCIDevice *usb;
 CEMMCDevice *sd;
 bool sd_ready;
 bool sd_attempted;
+bool services_started;
 
 bool initialise_sd() {
     if (!sd_attempted) {
@@ -109,6 +110,7 @@ extern "C" void rei_console_number(unsigned long long value) {
     while (n) rei_console_char(digits[--n]);
 }
 extern "C" void rei_console_poll(void) {
+    if (services_started) rei_net_poll();
     if (!usb) return;
     usb->UpdatePlugAndPlay();
     if (!keyboard) {
@@ -221,7 +223,8 @@ extern "C" int rei_sd_root_close(void) {
 }
 #endif
 
-extern "C" void rei_console_idle(void) {
+extern "C" void rei_platform_services_init(void) {
+    if (services_started) return;
     probe_sd();
     auto *options = CKernelOptions::Get();
     if (options->GetAppOptionDecimal("rei.net", 1)) {
@@ -239,10 +242,13 @@ extern "C" void rei_console_idle(void) {
     } else {
         rei_console_puts("REI: NETWORK INITIALISATION DISABLED\n");
     }
+    services_started = true;
+}
+extern "C" void rei_console_idle(void) {
+    rei_platform_services_init();
     rei_console_puts("REI: Keyboard echo test (not a shell).\n");
     for (;;) {
         rei_console_poll();
-        rei_net_poll();
         int c = rei_console_read();
         if (c >= 0) rei_console_char(c == '\r' ? '\n' : static_cast<char>(c));
     }

@@ -91,7 +91,7 @@ if [[ "$source_mode" == embedded ]]; then
 else
   printf '.section .rodata.root,"a"\n.global rei_root_start,rei_root_end\n.balign 16\nrei_root_start:\nrei_root_end:\n' > "$out/root.S"
 fi
-flags=(--target=aarch64-none-elf -mcpu=cortex-a76 -DREI_PI5 -DREI_CIRCLE -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-outline-atomics -mstrict-align)
+flags=(--target=aarch64-none-elf -mcpu=cortex-a76 -DREI_PI5 -DREI_CIRCLE -DREI_NATIVE_SHELL -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-outline-atomics -mstrict-align)
 if [[ "$source_mode" != embedded ]]; then flags+=(-DREI_ROOT_SD); fi
 objects=(console.o network.o root.o circle-drivers.o)
 while IFS= read -r -d '' source; do

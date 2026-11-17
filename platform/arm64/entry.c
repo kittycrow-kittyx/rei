@@ -25,7 +25,7 @@ static uint32_t component(croissant_native_memory_ts__TetoMemory mem,uint32_t pa
     require(inode!=0 && inode!=UINT32_MAX,"REI: VFS LOOKUP FAILED\n");
     return inode;
 }
-static void run_hello(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
+static void run_guest(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
     const uint32_t scratch=K(tetoImageReserve)(mem,256);
     require(scratch!=UINT32_MAX,"REI: SCRATCH RESERVE FAILED\n");
     const uint32_t etc=component(mem,root,scratch,"etc");
@@ -35,22 +35,36 @@ static void run_hello(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
     require(V(tetoVfsReadData)(mem,motd,0,scratch,(uint32_t)size)==(int32_t)size,"REI: MOTD READ FAILED\n");
     for(uint32_t i=0;i<size;i++)rei_console_char((char)M(loadU8)(mem,scratch+i));
     rei_console_puts("\nREI: MIKUOS MOTD READ PASS\n");
+#ifdef REI_NATIVE_SHELL
+    uint32_t bin=component(mem,root,scratch,"bin");
+    uint32_t program=component(mem,bin,scratch,"thsh-native.39");
+    static const uint8_t argv0[]="/bin/thsh-native.39";
+    status(K(tetoEnableHostStdin)(mem),"REI: HOST STDIN INIT FAILED");
+#ifdef REI_CIRCLE
+    rei_platform_services_init();
+#endif
+#else
     uint32_t usr=component(mem,root,scratch,"usr");
     uint32_t bin=component(mem,usr,scratch,"bin");
-    uint32_t hello=component(mem,bin,scratch,"hello-rv64.39");
-    size=V(tetoVfsFileSize)(mem,hello);
+    uint32_t program=component(mem,bin,scratch,"hello-rv64.39");
+    static const uint8_t argv0[]="/usr/bin/hello-rv64.39";
+#endif
+    size=V(tetoVfsFileSize)(mem,program);
     status(K(tetoImageRelease)(mem,scratch,256),"REI: SCRATCH RELEASE FAILED");
-    require(size>0&&size<1024*1024,"REI: HELLO SIZE INVALID\n");
+    require(size>0&&size<1024*1024,"REI: PROGRAM SIZE INVALID\n");
     status(K(tetoHartInit)(mem,0,UINT64_C(0x4000000000),0),"REI: HART INIT FAILED");
     status(K(tetoProcessInit)(mem,0,1,0,0,0,0,0,0,0),"REI: PROCESS INIT FAILED");
     uint32_t input=K(tetoImageReserve)(mem,(uint32_t)size);
     require(input!=UINT32_MAX,"REI: PROGRAM RESERVE FAILED\n");
-    require(V(tetoVfsReadData)(mem,hello,0,input,(uint32_t)size)==(int32_t)size,"REI: PROGRAM READ FAILED\n");
+    require(V(tetoVfsReadData)(mem,program,0,input,(uint32_t)size)==(int32_t)size,"REI: PROGRAM READ FAILED\n");
     status(croissant_native_thx_ts__tetoLoadThx(mem,0,input,(uint32_t)size),"REI: THX LOAD FAILED");
     status(K(tetoImageRelease)(mem,input,(uint32_t)size),"REI: PROGRAM RELEASE FAILED");
+#ifdef REI_NATIVE_SHELL
+    rei_console_puts("REI: MIKUOS NATIVE SHELL LOADED\n");
+#else
     rei_console_puts("REI: MIKUOS HELLO LOADED\n");
-    /* The bundled fixture does not use AT_RANDOM. General userspace needs entropy. */
-    static const uint8_t argv0[]="/usr/bin/hello-rv64.39";
+#endif
+    /* These freestanding guests do not depend on AT_RANDOM. */
     const uint32_t arglen=sizeof(argv0)-1, startupLen=36+arglen;
     uint32_t start=K(tetoImageReserve)(mem,startupLen);
     require(start!=UINT32_MAX,"REI: STARTUP RESERVE FAILED\n");
@@ -62,7 +76,11 @@ static void run_hello(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
     status(croissant_native_start_ts__tetoBuildInitialStack(mem,0,start,startupLen,1024*1024),"REI: STARTUP FAILED");
     status(K(tetoImageRelease)(mem,start,startupLen),"REI: STARTUP RELEASE FAILED");
     bool wrote = false;
+#ifdef REI_NATIVE_SHELL
+    for(;;){
+#else
     for(unsigned batch=0;batch<1024;batch++){
+#endif
         rei_console_poll();
         uint64_t tick, freq;
         __asm__ volatile("mrs %0, cntpct_el0":"=r"(tick));
@@ -72,6 +90,15 @@ static void run_hello(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
             int32_t op=K(tetoHostOperation)(mem,0), fd=K(tetoHostDescriptor)(mem,0);
             uint32_t n=K(tetoHostLength)(mem,0);
             uint64_t addr=K(tetoHostAddress)(mem,0);
+#ifdef REI_NATIVE_SHELL
+            if(op==A(TETO_HOST_READ)){
+                require(fd==0 && n==1,"REI: INVALID STDIN REQUEST\n");
+                int ch;
+                do { rei_console_poll(); ch=rei_console_read(); } while(ch<0);
+                status(K(tetoResumeHostRead)(mem,0,ch),"REI: STDIN RESUME FAILED");
+                continue;
+            }
+#endif
             require(op==A(TETO_HOST_WRITE)&&(fd==1||fd==2)&&n<=65536,"REI: UNSUPPORTED HOST REQUEST\n");
             for(uint32_t i=0;i<n;i++){
                 int32_t ch=K(guestLoadU8)(mem,0,addr+i);
@@ -82,8 +109,12 @@ static void run_hello(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
             status(K(tetoResumeHost)(mem,0,n),"REI: HOST RESUME FAILED");
         }else if(result==A(TETO_BATCH_EXITED)){
             status(K(tetoHartExitCode)(mem,0),"REI: GUEST EXITED NONZERO");
-            require(wrote,"REI: HELLO DID NOT WRITE\n");
+            require(wrote,"REI: GUEST DID NOT WRITE\n");
+#ifdef REI_NATIVE_SHELL
+            rei_console_puts("REI: MIKUOS SHELL EXIT\n");
+#else
             rei_console_puts("REI: MIKUOS HELLO EXIT PASS\n");
+#endif
             return;
         }else if(result!=A(TETO_BATCH_BUDGET)){
             rei_console_puts("REI: GUEST STOPPED status=");
@@ -144,7 +175,9 @@ void rei_native_start(void){
     require(V(tetoVfsLoaded)(memory),"REI: ROOT NOT MOUNTED\n");
     rei_console_puts("REI: MIKUOS ROOT MOUNT PASS\n");
     rei_console_puts("REI: VFS INODES ");rei_console_number(V(tetoVfsInodeCount)(memory));rei_console_puts("\n");
-    run_hello(memory,V(tetoVfsRoot)(memory));
+    run_guest(memory,V(tetoVfsRoot)(memory));
+#ifndef REI_NATIVE_SHELL
     rei_console_idle();
+#endif
     for(;;)__asm__ volatile("wfe");
 }

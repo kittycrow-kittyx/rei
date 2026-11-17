@@ -10,6 +10,9 @@ void rei_console_number(unsigned long long x);
 int rei_console_read(void);
 void rei_console_poll(void);
 void rei_console_idle(void);
+#ifdef REI_CIRCLE
+void rei_platform_services_init(void);
+#endif
 void rei_panic(const char *text);
 #ifdef __cplusplus
 }

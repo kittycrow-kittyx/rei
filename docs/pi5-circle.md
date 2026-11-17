@@ -125,3 +125,19 @@ reported as operational. Do not initialise every optional peripheral
 unconditionally: bus pins, interrupts and DMA resources may conflict.
 The future commit-triggered build can publish these precompiled
 artefacts, but no workflow is added during local bring-up.
+
+## Native console startup
+
+Normal C Circle builds launch /bin/thsh-native.39 from the mikuOS
+root image. This is a freestanding bring-up shell, not the hosted
+thsh implementation. Thistle owns the opt-in stdin read and validates
+one-byte completion under the hart lock. Rei polls hardware while the
+guest is waiting. Circle services start before the guest prompt.
+The direct UART build retains the hello regression by default; setting
+REI_NATIVE_SHELL=1 selects the native shell for serial testing.
+
+Onboard Bluetooth and CSI capture are not provided by the pinned Circle
+revision. The Pi 5 uses BCM2712 UARTA for onboard HCI and RP1 CFE/CSI-2
+for cameras. These require separate freestanding hardware ports with
+firmware, clock/reset, interrupt and DMA handling; no Linux kernel
+modules are linked. USB Bluetooth is a different device class.
