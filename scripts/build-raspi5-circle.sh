@@ -17,73 +17,32 @@ for tool in "${prefix}gcc" "${prefix}g++" "${prefix}ld" "${prefix}nm" clang make
   command -v "$tool" >/dev/null || { echo "Missing tool: $tool" >&2; exit 1; }
 done
 
-pinned="$(git ls-tree HEAD vendor/circle | awk '$1 == "160000" {print $3}')"
-test "$pinned" = "7a81e1b480fe7d19fc1fc695b89bff0a0848f44b"
-git submodule update --init --jobs "$jobs" -- vendor/circle
-test "$(git -C vendor/circle rev-parse HEAD)" = "$pinned"
-git -C vendor/circle diff --quiet
-git -C vendor/circle diff --cached --quiet
-
-key="$(printf '%s\n' "$pinned" "$prefix" "$("${prefix}gcc" -dumpfullversion)" 'pi5-16m-v4' | sha256sum | cut -c1-16)"
-circle="$repo/build/circle/$key"
-if [[ ! -f "$circle/Rules.mk" ]]; then
-  mkdir -p "$circle"
-  git -C vendor/circle archive "$pinned" | tar -xf - -C "$circle"
-fi
-cat > "$circle/Config.mk" <<EOF
-AARCH = 64
-RASPPI = 5
-PREFIX64 = $prefix
-STDLIB_SUPPORT = 1
-DEFINE += -DKERNEL_MAX_SIZE=16777216 -DDEFAULT_KEYMAP=\"UK\"
-EOF
-
-# Configure only the cached Circle build copy, not the submodule.
-sed -i 's/^#define FF_FS_READONLY[[:space:]]*0$/#define FF_FS_READONLY 1/' "$circle/addon/fatfs/ffconf.h"
-grep -Eq '^#define FF_FS_READONLY[[:space:]]+1$' "$circle/addon/fatfs/ffconf.h"
-# Board-conditioned upstream Makefiles select the Pi 5 implementations.
-# Keep the entire hardware inventory, not just the objects referenced at boot.
-driver_archives=(
-  lib/libcircle.a
-  lib/usb/libusb.a
-  lib/input/libinput.a
-  lib/sound/libsound.a
-  addon/SDCard/libsdcard.a
-  addon/nvme/libnvme.a
-  addon/wlan/libwlan.a
-  addon/rp1dsi/librp1dsi.a
-  addon/rtc/librtc.a
-  addon/display/libdisplay.a
-  addon/gpio/libgpio.a
-  addon/sensor/libsensor.a
-  addon/OneWire/libonewire.a
-  addon/WS28XX/libws28xx.a
-  addon/dio/libdio.a
-  addon/pico/libpico.a
-  addon/microbit/libmicrobit.a
-)
-for archive in "${driver_archives[@]}"; do
-  dir="${archive%/*}"
-  args=()
-  if [[ "$dir" == addon/WS28XX ]]; then
-    # Pi 5 has the RP1 SPI controller, not the older BCM SMI implementation.
-    args+=(OBJS=ws28xxstripe.o)
-  fi
-  nice -n 10 make -C "$circle/$dir" -j "$jobs" "${archive##*/}" "${args[@]}"
-done
-for library in lib/fs addon/fatfs lib/sched lib/net; do
-  nice -n 10 make -C "$circle/$library" -j "$jobs"
-done
+source scripts/raspi5-driver-bundle.sh
+circle_prepare
+case "${REI_BUILD_DRIVERS:-0}" in
+  0)
+    if [[ -e "$repo/prebuilt/raspi5/SHA256SUMS" ]]; then
+      bundle="$repo/prebuilt/raspi5"
+    else
+      bundle="$repo/build/prebuilt/raspi5"
+      # First migration: reuse the already compiled archives if available.
+      if [[ ! -e "$bundle/SHA256SUMS" ]]; then circle_export "$bundle"; fi
+    fi
+    ;;
+  1)
+    circle_compile
+    bundle="$repo/build/prebuilt/raspi5"
+    circle_export "$bundle"
+    ;;
+  *) echo "REI_BUILD_DRIVERS must be 0 or 1" >&2; exit 2 ;;
+esac
+circle_verify "$bundle"
+echo "REI: using verified precompiled Circle drivers ($bundle)"
 bash scripts/generate-native.sh
 generated="$repo/build/native-generated"
 out="$repo/build/native/$board"
 mkdir -p "$out"
-archive_paths=()
-for archive in "${driver_archives[@]}"; do archive_paths+=("$circle/$archive"); done
-# Partial linking extracts all driver objects without pulling in optional
-# Circle networking services or replacing the generated kernel.
-nice -n 10 "${prefix}ld" -r --whole-archive "${archive_paths[@]}" --no-whole-archive -o "$out/circle-drivers.o"
-printf '%s\n' "${driver_archives[@]}" > "$out/driver-archives.txt"
+cp "$bundle/circle-drivers.o" "$bundle/driver-archives.txt" "$out/"
 if [[ "$root" != "$out/root.vfs" ]]; then cp "$root" "$out/root.vfs"; fi
 cp platform/raspi5/circle/{console.cpp,storage.h,network.cpp,network.h} "$out/"
 if [[ "$source_mode" == embedded ]]; then
@@ -103,7 +62,7 @@ while IFS= read -r -d '' source; do
 done < <(find "$generated/src" -type f -name '*.c' -print0 | sort -z; printf '%s\0' runtime/arm64/intrinsics.c platform/arm64/entry.c)
 rm -f "$out/console.o" "$out/network.o" "$out/root.o"
 nice -n 10 make -C "$out" -f "$repo/platform/raspi5/circle/Makefile" \
-  CIRCLEHOME="$circle" EXTRAINCLUDE="-I$repo/platform/arm64 $root_define" \
+  CIRCLEHOME="$circle" REI_DRIVER_BUNDLE="$bundle" EXTRAINCLUDE="-I$repo/platform/arm64 $root_define" \
   OBJS="${objects[*]}" TARGET="rei-$board" -j "$jobs" "rei-$board.img"
 
 end="$("${prefix}nm" "$out/rei-$board.elf" | awk '$3 == "_end" {print $1}')"
@@ -112,5 +71,6 @@ end="$("${prefix}nm" "$out/rei-$board.elf" | awk '$3 == "_end" {print $1}')"
 }
 cp "$generated/revisions.txt" "$out/revisions.txt"
 printf 'circle %s\nroot-source %s\n' "$pinned" "$source_mode" >> "$out/revisions.txt"
+printf 'circle-bundle %s\n' "$(sha256sum "$bundle/SHA256SUMS" | cut -d' ' -f1)" >> "$out/revisions.txt"
 (cd "$out"; sha256sum rei-$board.img rei-$board.elf root.vfs revisions.txt circle-drivers.o driver-archives.txt > SHA256SUMS)
 echo "Circle-backed Pi 5 image: $out/rei-$board.img"

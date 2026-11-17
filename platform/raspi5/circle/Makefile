@@ -1,9 +1,10 @@
 # Hardware objects are retained by the driver bundle. Link just the
 # support libraries on demand, rather than the whole Circle IP stack.
-LIBS = $(CIRCLEHOME)/addon/fatfs/libfatfs.a \
-       $(CIRCLEHOME)/lib/fs/libfs.a \
-       $(CIRCLEHOME)/lib/net/libnet.a \
-       $(CIRCLEHOME)/lib/sched/libsched.a
+REI_DRIVER_BUNDLE ?= $(CIRCLEHOME)
+LIBS = $(REI_DRIVER_BUNDLE)/addon/fatfs/libfatfs.a \
+       $(REI_DRIVER_BUNDLE)/lib/fs/libfs.a \
+       $(REI_DRIVER_BUNDLE)/lib/net/libnet.a \
+       $(REI_DRIVER_BUNDLE)/lib/sched/libsched.a
 
 include $(CIRCLEHOME)/Rules.mk
 

@@ -17,8 +17,9 @@ toolchain.
     git submodule update --init --jobs 2 -- vendor/circle
     nice -n 10 bash scripts/build-raspi5-circle.sh /absolute/path/root.vfs
 
-The script builds Circle libraries in build/circle without modifying
-the vendor checkout. REI_JOBS defaults to 2. The resulting
+The script uses a verified precompiled driver bundle in prebuilt/raspi5.
+During initial bring-up it can export an existing local build/circle cache
+without compiling drivers. REI_JOBS defaults to 2. The resulting
 build/native/raspi5-circle/rei-raspi5-circle.img embeds the mikuOS root.
 The 16 MiB kernel reservation includes the embedded VFS. The native
 allocation pool uses Circle's allocator, not a fixed physical address.
@@ -105,7 +106,7 @@ hardware bring-up all builds are local; no new CI workflow is enabled.
 
 ## Standard hardware driver bundle
 
-Both root variants build the same Pi 5 hardware libraries from the
+Both root variants link the same Pi 5 hardware libraries from the
 pinned Circle revision. The build emits circle-drivers.o (all objects
 from the listed hardware archives) and driver-archives.txt beside the
 kernel image, and retains the driver code at final link. This includes
@@ -141,3 +142,24 @@ revision. The Pi 5 uses BCM2712 UARTA for onboard HCI and RP1 CFE/CSI-2
 for cameras. These require separate freestanding hardware ports with
 firmware, clock/reset, interrupt and DMA handling; no Linux kernel
 modules are linked. USB Bluetooth is a different device class.
+
+## Precompiled Pi 5 driver bundle
+
+Export the already compiled archives without recompiling:
+
+    nice -n 10 bash scripts/export-raspi5-drivers.sh
+
+This creates prebuilt/raspi5 with the relocatable AArch64 driver object,
+four support archives, inventory, licence, provenance and SHA256SUMS.
+Commit that directory on the Raspberry Pi branch. Both normal root
+variants verify and link the bundle without compiling Circle libraries.
+The pinned source is still required for headers, the linker script and
+corresponding source distribution. The kernel and its board adapters
+are compiled separately. The drivers are native AArch64 ELF objects,
+not THX guest binaries.
+
+For an intentional driver rebuild, set REI_BUILD_DRIVERS=1 when building
+the image, then export the resulting cache again. A missing cache or
+mismatched bundle fails rather than silently recompiling. Keep the
+original Circle licence and the corresponding pinned source and build
+scripts alongside the binary distribution. No CI job is added here.
