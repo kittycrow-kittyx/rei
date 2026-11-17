@@ -18,7 +18,7 @@ test "$(git -C vendor/circle rev-parse HEAD)" = "$pinned"
 git -C vendor/circle diff --quiet
 git -C vendor/circle diff --cached --quiet
 
-key="$(printf '%s\n' "$pinned" "$prefix" "$("${prefix}gcc" -dumpfullversion)" 'pi5-16m-v1' | sha256sum | cut -c1-16)"
+key="$(printf '%s\n' "$pinned" "$prefix" "$("${prefix}gcc" -dumpfullversion)" 'pi5-16m-v2' | sha256sum | cut -c1-16)"
 circle="$repo/build/circle/$key"
 if [[ ! -f "$circle/Rules.mk" ]]; then
   mkdir -p "$circle"
@@ -29,7 +29,7 @@ AARCH = 64
 RASPPI = 5
 PREFIX64 = $prefix
 STDLIB_SUPPORT = 1
-DEFINE += -DKERNEL_MAX_SIZE=16777216 -DDEFAULT_KEYMAP=\\\"UK\\\"
+DEFINE += -DKERNEL_MAX_SIZE=16777216 -DDEFAULT_KEYMAP=\"UK\"
 EOF
 
 for library in lib lib/usb lib/input lib/fs addon/SDCard; do
