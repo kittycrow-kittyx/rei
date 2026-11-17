@@ -1,12 +1,11 @@
-/* Adapter for the two distinct buffers emitted by this pinned Croissant ABI.
- * The ABI contains sizes, not pointers; reject any other allocation or size reuse.
- * A general native ArrayBuffer representation belongs in Croissant.
- */
+/* ARM64 native platform implementation of the Croissant buffer ABI. */
 #include "croissant/intrinsics.h"
-#define ARENA_SIZE (64u * 1024u * 1024u)
-static uint8_t arena[ARENA_SIZE] __attribute__((aligned(16), section(".arena")));
-static uint8_t scratch[8] __attribute__((aligned(8)));
-static bool arena_allocated, scratch_allocated;
+#define POOL_SIZE (80u * 1024u * 1024u)
+#define MAX_BUFFERS 64u
+static uint8_t arena[POOL_SIZE] __attribute__((aligned(16), section(".arena")));
+typedef struct { size_t offset, size; } Allocation;
+static Allocation allocations[MAX_BUFFERS];
+static size_t used, count;
 extern void rei_panic(const char *);
 
 void *memset(void *p, int value, size_t size) {
@@ -25,9 +24,10 @@ __attribute__((noreturn)) void __bake_c_abort_range(void) {
     for (;;) __asm__ volatile("wfe");
 }
 static uint8_t *base(__bake_c_Buffer b) {
-    if (b.byteLength == 8 && scratch_allocated) return scratch;
-    if (b.byteLength == ARENA_SIZE && arena_allocated) return arena;
-    __bake_c_abort_range();
+    if (b.handle == 0 || b.handle > count) __bake_c_abort_range();
+    const Allocation *a = &allocations[b.handle - 1];
+    if (b.byteLength != (double)a->size) __bake_c_abort_range();
+    return arena + a->offset;
 }
 static uint8_t *at(__bake_c_Buffer b, double offset, size_t n) {
     if (!(offset >= 0 && offset <= b.byteLength && (double)n <= b.byteLength - offset)) __bake_c_abort_range();
@@ -36,10 +36,16 @@ static uint8_t *at(__bake_c_Buffer b, double offset, size_t n) {
     return base(b) + k;
 }
 __bake_c_Buffer __bake_c_new_buffer(double size) {
-    if (size == 8 && !scratch_allocated) { scratch_allocated = true; memset(scratch, 0, 8); }
-    else if (size == ARENA_SIZE && !arena_allocated) { arena_allocated = true; memset(arena, 0, ARENA_SIZE); }
-    else __bake_c_abort_range();
-    return (__bake_c_Buffer){.byteLength = size};
+    if (!(size >= 0 && size <= POOL_SIZE) || count == MAX_BUFFERS) __bake_c_abort_range();
+    size_t length = (size_t)size;
+    if ((double)length != size) __bake_c_abort_range();
+    size_t offset = (used + 15u) & ~(size_t)15u;
+    if (offset > POOL_SIZE || length > POOL_SIZE - offset) __bake_c_abort_range();
+    allocations[count] = (Allocation){offset, length};
+    ++count;
+    used = offset + length;
+    memset(arena + offset, 0, length);
+    return (__bake_c_Buffer){.handle = count, .byteLength = size};
 }
 __bake_c_Buffer __bake_c_new_shared_buffer(double size) { return __bake_c_new_buffer(size); }
 __bake_c_View __bake_c_new_view(__bake_c_Buffer b) { return (__bake_c_View){.buffer=b}; }
@@ -72,9 +78,7 @@ int32_t croissant_js_shl(double a,double b){return (int32_t)(u32(a)<<(u32(b)&31)
 int32_t croissant_js_shr(double a,double b){return (int32_t)u32(a)>>(u32(b)&31);}
 uint32_t croissant_js_ushr(double a,double b){return u32(a)>>(u32(b)&31);}
 int32_t croissant_js_not(double a){return (int32_t)~u32(a);}
-/* The only emitted imul call is immediately coerced to uint32_t. Preserve
- * that result without an out-of-range negative floating-to-unsigned C cast. */
-double __bake_c_i32_mul(double a,double b){return (double)(u32(a)*u32(b));}
+double __bake_c_i32_mul(double a,double b){return (double)(int32_t)(u32(a)*u32(b));}
 double __bake_c_f64_trunc(double x){double y;__asm__("frintz %d0, %d1":"=w"(y):"w"(x));return y;}
 double __bake_c_f64_floor(double x){double y;__asm__("frintm %d0, %d1":"=w"(y):"w"(x));return y;}
 double __bake_c_f64_ceil(double x){double y;__asm__("frintp %d0, %d1":"=w"(y):"w"(x));return y;}

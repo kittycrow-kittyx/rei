@@ -19,3 +19,15 @@ void rei_console_char(char c) {
 void rei_console_puts(const char *s){while(*s)rei_console_char(*s++);}
 void rei_console_number(unsigned long long x){char digits[21];unsigned n=0;do{digits[n++]=(char)('0'+x%10);x/=10;}while(x);while(n)rei_console_char(digits[--n]);}
 void rei_panic(const char *s){rei_console_puts(s);for(;;)__asm__ volatile("wfe");}
+
+static void hex64(uint64_t v) {
+    for (unsigned i = 64; i; i -= 4) rei_console_char("0123456789abcdef"[(v >> (i-4)) & 15]);
+}
+__attribute__((noreturn)) void rei_exception(uint64_t esr, uint64_t elr, uint64_t far, uint64_t el) {
+    rei_console_puts("\nREI: ARM EXCEPTION EL="); rei_console_number(el >> 2);
+    rei_console_puts(" ESR=0x"); hex64(esr);
+    rei_console_puts(" ELR=0x"); hex64(elr);
+    rei_console_puts(" FAR=0x"); hex64(far);
+    rei_panic("\n");
+    for (;;) __asm__ volatile("wfe");
+}

@@ -19,5 +19,6 @@ test "$s" = 124 || test "$s" = 0
 grep -F 'REI: CANONICAL KERNEL INIT PASS' "$out/serial.log"
 grep -F 'REI: MIKUOS ROOT MOUNT PASS' "$out/serial.log"
 grep -F 'REI: MIKUOS MOTD READ PASS' "$out/serial.log"
+grep -F "hello from Teto RV64GC" "$out/serial.log"
 # Guest execution must not masquerade as an interactive OS.
 grep -F 'REI: MIKUOS HELLO EXIT PASS' "$out/serial.log"

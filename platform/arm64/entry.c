@@ -34,7 +34,7 @@ static void run_hello(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
     rei_console_puts("\nREI: MIKUOS MOTD READ PASS\n");
     uint32_t usr=component(mem,root,scratch,"usr");
     uint32_t bin=component(mem,usr,scratch,"bin");
-    uint32_t hello=component(mem,bin,scratch,"hello.txe");
+    uint32_t hello=component(mem,bin,scratch,"hello-rv64.39");
     size=V(tetoVfsFileSize)(mem,hello);
     status(K(tetoImageRelease)(mem,scratch,256),"REI: SCRATCH RELEASE FAILED");
     require(size>0&&size<1024*1024,"REI: HELLO SIZE INVALID\n");
@@ -46,8 +46,8 @@ static void run_hello(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
     status(croissant_native_thx_ts__tetoLoadThx(mem,0,input,(uint32_t)size),"REI: THX LOAD FAILED");
     status(K(tetoImageRelease)(mem,input,(uint32_t)size),"REI: PROGRAM RELEASE FAILED");
     rei_console_puts("REI: MIKUOS HELLO LOADED\n");
-    /* Only an isolated boot test. No interactive session or real entropy yet. */
-    static const uint8_t argv0[]="/usr/bin/hello.txe";
+    /* The bundled fixture does not use AT_RANDOM. General userspace needs entropy. */
+    static const uint8_t argv0[]="/usr/bin/hello-rv64.39";
     const uint32_t arglen=sizeof(argv0)-1, startupLen=36+arglen;
     uint32_t start=K(tetoImageReserve)(mem,startupLen);
     require(start!=UINT32_MAX,"REI: STARTUP RESERVE FAILED\n");
@@ -58,11 +58,12 @@ static void run_hello(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
     copy_bytes(mem,start+36,argv0,arglen);
     status(croissant_native_start_ts__tetoBuildInitialStack(mem,0,start,startupLen,1024*1024),"REI: STARTUP FAILED");
     status(K(tetoImageRelease)(mem,start,startupLen),"REI: STARTUP RELEASE FAILED");
+    bool wrote = false;
     for(unsigned batch=0;batch<1024;batch++){
         uint64_t tick, freq;
         __asm__ volatile("mrs %0, cntpct_el0":"=r"(tick));
         __asm__ volatile("mrs %0, cntfrq_el0":"=r"(freq));
-        int32_t result=K(tetoRunRv64Batch)(mem,0,1024,(int64_t)(tick/(freq?freq:1)*1000000),0);
+        int32_t result=K(tetoRunRv64Batch)(mem,0,1024,(int64_t)((tick/(freq?freq:1))*1000000+(tick%(freq?freq:1))*1000000/(freq?freq:1)),0);
         if(result==A(TETO_BATCH_HOST)){
             int32_t op=K(tetoHostOperation)(mem,0), fd=K(tetoHostDescriptor)(mem,0);
             uint32_t n=K(tetoHostLength)(mem,0);
@@ -73,9 +74,11 @@ static void run_hello(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
                 require(ch>=0&&ch<=255,"REI: GUEST READ FAILED\n");
                 rei_console_char((char)ch);
             }
+            if(n) wrote = true;
             status(K(tetoResumeHost)(mem,0,n),"REI: HOST RESUME FAILED");
         }else if(result==A(TETO_BATCH_EXITED)){
             status(K(tetoHartExitCode)(mem,0),"REI: GUEST EXITED NONZERO");
+            require(wrote,"REI: HELLO DID NOT WRITE\n");
             rei_console_puts("REI: MIKUOS HELLO EXIT PASS\n");
             return;
         }else if(result!=A(TETO_BATCH_BUDGET)){

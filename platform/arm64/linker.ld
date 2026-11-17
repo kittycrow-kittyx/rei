@@ -11,5 +11,6 @@ SECTIONS {
     .stack (NOLOAD) : ALIGN(16) { . += 0x20000; __stack_top = .; }
     .arena 0x04000000 (NOLOAD) : ALIGN(4096) { *(.arena) }
     ASSERT(__stack_top < 0x04000000, "Kernel and embedded root overlap arena")
+    ASSERT(SIZEOF(.arena) <= 0x05000000, "Native allocation pool too large")
     /DISCARD/ : { *(.comment*) *(.note*) *(.eh_frame*) }
 }

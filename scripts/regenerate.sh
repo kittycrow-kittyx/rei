@@ -79,7 +79,7 @@ cp thistle/build/croissant-bake/bake-manifest.json docs/bake-manifest.json
 
 # Host compilation, including the complete relocatable combined object.
 CC=gcc cmake -S . -B build/host -DCMAKE_BUILD_TYPE=Release
-cmake --build build/host --parallel
+cmake --build build/host --parallel 2
 rm -rf dist/host-gcc dist/x86_64 dist/aarch64
 mkdir -p dist/host-gcc dist/x86_64 dist/aarch64
 

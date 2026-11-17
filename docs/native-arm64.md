@@ -1,29 +1,32 @@
 # Native ARM64 boot
 
-This experimental target compiles all committed Croissant-generated modules
-and links Rei's ARM64 runtime. It embeds a VFS image supplied by mikuOS,
-initialises the canonical Thistle kernel and attempts to execute its
-existing hello programme through the generated RV64 instruction engine.
+Rei compiles the canonical Thistle source through Bake and Croissant.
+It owns ARM startup, linking and platform interfaces, not kernel semantics.
 
+Initialise the pinned dependencies before building:
+
+    git submodule update --init --recursive
     bash scripts/build-arm64.sh raspi5 /path/to/root.vfs
     bash scripts/qemu-native-root.sh /path/to/root.vfs
 
-The Pi 5 output is build/native/raspi5/rei-raspi5.img, linked at 0x80000.
-The console uses the BCM2712 dedicated debug PL011 at 0x107d001000,
-115200 8N1. It is not the 40-pin RP1 UART. Physical testing is required.
+Each build generates fresh C in build/native-generated. The Pi 5 image is
+build/native/raspi5/rei-raspi5.img, linked at 0x80000. Its console uses the
+BCM2712 dedicated debug PL011 at 0x107d001000 (115200 8N1); physical testing
+is required. The exception vectors report EL, ESR, ELR and FAR.
 
-The runtime is a single-hart prototype: the pinned generated buffer ABI
-lacks pointer identity, so it accepts only the distinct 8-byte floating
-scratch buffer and 64 MiB kernel arena, rejecting repeated allocations.
-The arena is fixed at physical 64 MiB, ending at 128 MiB, and requires
-that range to be free. The imul adapter returns the unsigned pattern
-required by the sole generated call, whose C cast otherwise loses a
-negative result. The compiler needs general fixes for these semantics.
-The host bridge supports stdout and stderr writes only. Guest input,
-entropy, networking, persistence and a shell are not implemented.
+Rei initialises the kernel, mounts the supplied mikuOS VFS, reads its MOTD,
+and attempts to run the committed RV64GC hello fixture at
+/usr/bin/hello-rv64.39. The legacy /usr/bin/hello.txe is not an RV64GC
+image and remains unchanged. The fixture writes to the console and exits;
+it is not an interactive shell.
 
-Rei is a compilation target of Thistle, not an independently maintained
-kernel. Kernel semantics and fixes belong in Thistle; lowering and native
-representation fixes belong in Bake/Croissant. Rei owns hardware startup,
-linking and the native platform bridge. The early ARM64 path uses strict
-alignment because it runs before memory translation is enabled.
+Kernel memory uses the native opaque buffer handle, with a bounded
+80 MiB allocation pool at physical 64 MiB. The first kernel allocation is
+64 MiB; the rest is available to other allocations. The prototype assumes
+this physical range is free and parks the secondary cores. The compiled
+kernel uses Thistle's per-hart floating-point scratch instead of a global
+buffer. Early ARM64 accesses use strict alignment.
+
+Only stdout/stderr host writes are implemented. HDMI, keyboard input,
+networking, entropy, persistence and interactive userspace are unfinished.
+Native C numeric semantics still require runtime parity tests.
