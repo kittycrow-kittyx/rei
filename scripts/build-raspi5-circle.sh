@@ -32,7 +32,7 @@ STDLIB_SUPPORT = 1
 DEFINE += -DKERNEL_MAX_SIZE=16777216 -DDEFAULT_KEYMAP=\\\"UK\\\"
 EOF
 
-for library in lib lib/usb lib/input lib/fs; do
+for library in lib lib/usb lib/input lib/fs addon/SDCard; do
   nice -n 10 make -C "$circle/$library" -j "$jobs"
 done
 
@@ -41,7 +41,7 @@ generated="$repo/build/native-generated"
 out="$repo/build/native/raspi5-circle"
 mkdir -p "$out"
 if [[ "$root" != "$out/root.vfs" ]]; then cp "$root" "$out/root.vfs"; fi
-cp platform/raspi5/circle/console.cpp "$out/console.cpp"
+cp platform/raspi5/circle/console.cpp platform/raspi5/circle/storage.h "$out/"
 printf '.section .rodata.root,"a"\n.global rei_root_start,rei_root_end\n.balign 16\nrei_root_start:\n.incbin "root.vfs"\nrei_root_end:\n' > "$out/root.S"
 flags=(--target=aarch64-none-elf -mcpu=cortex-a76 -DREI_PI5 -DREI_CIRCLE -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-outline-atomics -mstrict-align)
 objects=(console.o root.o)

@@ -13,7 +13,9 @@
 #include <circle/timer.h>
 #include <circle/usb/usbhcidevice.h>
 #include <circle/usb/usbkeyboard.h>
+#include <SDCard/emmc.h>
 #include "console.h"
+#include "storage.h"
 
 extern "C" void rei_native_start(void);
 
@@ -25,6 +27,8 @@ CUSBKeyboardDevice *keyboard;
 CScreenDevice *screen;
 CSerialDevice *serial;
 CUSBHCIDevice *usb;
+CEMMCDevice *sd;
+bool sd_ready;
 
 void key_pressed(const char *text) {
     while (*text) {
@@ -50,10 +54,12 @@ class Hardware {
     CTimer timer;
     CLogger logger;
     CUSBHCIDevice controller;
+    CEMMCDevice card;
 public:
     Hardware() : display(options.GetWidth(), options.GetHeight()),
         timer(&interrupts), logger(options.GetLogLevel(), &timer),
-        controller(&interrupts, &timer, TRUE) {}
+        controller(&interrupts, &timer, TRUE),
+        card(&interrupts, &timer, &led, CEMMCDevice::SDCardOnBoard) {}
     bool initialise() {
         if (display.Initialize()) screen = &display;
         if (uart.Initialize(115200)) serial = &uart;
@@ -69,6 +75,7 @@ public:
         } else {
             rei_console_puts("REI: USB HOST UNAVAILABLE\n");
         }
+        sd = &card;
         return true;
     }
 };
@@ -114,7 +121,50 @@ extern "C" int rei_console_read(void) {
     if (serial && serial->Read(&c, 1) == 1) return c;
     return -1;
 }
+extern "C" uint64_t rei_sd_capacity(void) {
+    return sd_ready ? sd->GetSize() : 0;
+}
+
+extern "C" int rei_sd_read_sector(uint64_t sector, void *buffer) {
+    if (!buffer || !sd_ready || sector > UINT32_MAX ||
+        sector >= rei_sd_capacity() / REI_SD_SECTOR_SIZE) return -1;
+    alignas(16) unsigned char block[REI_SD_SECTOR_SIZE];
+    const uint64_t offset = sector * REI_SD_SECTOR_SIZE;
+    if (sd->Seek(offset) != offset ||
+        sd->Read(block, sizeof block) != static_cast<int>(sizeof block)) return -1;
+    auto *out = static_cast<unsigned char *>(buffer);
+    for (unsigned i = 0; i < sizeof block; ++i) out[i] = block[i];
+    return 0;
+}
+
+static void probe_sd(void) {
+    rei_console_puts("REI: SD PROBE START\n");
+    if (!sd || !sd->Initialize()) {
+        rei_console_puts("REI: SD UNAVAILABLE\n");
+        return;
+    }
+    sd_ready = true;
+    rei_console_puts("REI: SD CAPACITY BYTES ");
+    rei_console_number(rei_sd_capacity());
+    rei_console_char('\n');
+    unsigned char first[REI_SD_SECTOR_SIZE], second[REI_SD_SECTOR_SIZE];
+    if (rei_sd_read_sector(0, first) || rei_sd_read_sector(0, second)) {
+        rei_console_puts("REI: SD SECTOR READ FAILED\n");
+        return;
+    }
+    for (unsigned i = 0; i < sizeof first; ++i) {
+        if (first[i] != second[i]) {
+            rei_console_puts("REI: SD SECTOR READ MISMATCH\n");
+            return;
+        }
+    }
+    rei_console_puts("REI: SD SECTOR 0 READ PASS\n");
+    rei_console_puts(first[510] == 0x55 && first[511] == 0xaa
+        ? "REI: SD BOOT SIGNATURE 55AA\n" : "REI: SD NO 55AA BOOT SIGNATURE\n");
+}
+
 extern "C" void rei_console_idle(void) {
+    probe_sd();
     rei_console_puts("REI: Keyboard echo test (not a shell).\n");
     for (;;) {
         rei_console_poll();

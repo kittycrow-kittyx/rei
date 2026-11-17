@@ -5,7 +5,7 @@ one board generation. The first Circle-backed target is the Pi 5.
 Other boards will need their own build and hardware acceptance tests.
 
 Circle 51.1.1 is vendored in vendor/circle. It supplies startup,
-screen, interrupt, timer, DMA and USB libraries. Thistle remains the
+screen, interrupt, timer, DMA, USB and onboard SD-card libraries. Thistle remains the
 kernel. The direct UART/QEMU build remains independent of Circle.
 
 ## Local build
@@ -33,6 +33,12 @@ Keep the NVMe installation unchanged.
 
 Check the real mikuOS MOTD and RV64GC hello output on HDMI, then attach
 a USB keyboard and verify the echo test. This is not a shell.
+After the guest hello exits, the adapter probes the onboard SD card,
+reports its byte capacity and reads sector zero twice. Expect
+`REI: SD SECTOR 0 READ PASS` and, on the prepared partitioned card,
+`REI: SD BOOT SIGNATURE 55AA`. The probe is read-only. It does not
+mount a filesystem, write to the card or access NVMe. A reported SD
+probe failure does not prevent the keyboard echo test.
 The pinned Thistle source supports host writes but not host reads;
 guest stdin requires a canonical Thistle change.
 
