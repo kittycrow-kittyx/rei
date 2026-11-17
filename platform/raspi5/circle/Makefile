@@ -1,7 +1,12 @@
-LIBS = $(REI_WLAN_LIBS) $(REI_FATFS_LIB) $(CIRCLEHOME)/lib/usb/libusb.a \
-       $(CIRCLEHOME)/lib/input/libinput.a \
-       $(CIRCLEHOME)/addon/SDCard/libsdcard.a \
+# Hardware objects are retained by the driver bundle. Link just the
+# support libraries on demand, rather than the whole Circle IP stack.
+LIBS = $(CIRCLEHOME)/addon/fatfs/libfatfs.a \
        $(CIRCLEHOME)/lib/fs/libfs.a \
-       $(CIRCLEHOME)/lib/libcircle.a
+       $(CIRCLEHOME)/lib/net/libnet.a \
+       $(CIRCLEHOME)/lib/sched/libsched.a
 
 include $(CIRCLEHOME)/Rules.mk
+
+# Do not discard an applicable driver merely because the boot diagnostic
+# does not instantiate it yet.
+LDFLAGS := $(filter-out --gc-sections,$(LDFLAGS))

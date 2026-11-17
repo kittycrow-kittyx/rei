@@ -102,3 +102,26 @@ Keep kernel, compiler and driver source revisions pinned. The intended
 release process builds driver-linked Pi kernel artefacts on commits so
 consumers can use a prebuilt image instead of compiling Circle. During
 hardware bring-up all builds are local; no new CI workflow is enabled.
+
+## Standard hardware driver bundle
+
+Both root variants build the same Pi 5 hardware libraries from the
+pinned Circle revision. The build emits circle-drivers.o (all objects
+from the listed hardware archives) and driver-archives.txt beside the
+kernel image, and retains the driver code at final link. This includes
+USB device classes, DMA, GPIO, SPI, I2C, hardware random source, timers,
+watchdog, audio, SD, NVMe, Ethernet, WLAN, RTC, DSI panels, auxiliary
+displays, sensors, GPIO expanders, OneWire, SPI LED strips, SPI digital
+I/O and supported external microcontroller interfaces. The older BCM
+SMI LED driver is excluded on Pi 5. Circle's service applications,
+GUI libraries, Linux compatibility add-on and full network services
+are not part of this hardware bundle. USB Bluetooth controller support
+is included; onboard Bluetooth and camera support require separate
+assessment and are not claimed here.
+
+Link inclusion is not guest device exposure or hardware validation.
+Only drivers with platform adapters and acceptance tests can be
+reported as operational. Do not initialise every optional peripheral
+unconditionally: bus pins, interrupts and DMA resources may conflict.
+The future commit-triggered build can publish these precompiled
+artefacts, but no workflow is added during local bring-up.
