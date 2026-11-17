@@ -16,18 +16,18 @@ command -v bun >/dev/null
 command -v node >/dev/null
 command -v npm >/dev/null
 
-npm install --prefix bake
-npm install --prefix croissant
-npm run build --prefix croissant
+nice -n 10 npm install --prefix bake
+nice -n 10 npm install --prefix croissant
+nice -n 10 npm run build --prefix croissant
 
 node croissant/dist/src/thistle-project.js thistle
 (
   cd bake
-  bun src/cli.ts --project ../thistle/tsconfig.croissant.json \
+  nice -n 10 bun src/cli.ts --project ../thistle/tsconfig.croissant.json \
     --out-dir build/croissant-bake --target=clang --engine=host
 )
 
-node croissant/dist/src/cli.js \
+nice -n 10 node croissant/dist/src/cli.js \
   --manifest thistle/build/croissant-bake/bake-manifest.json \
   --out-dir build/croissant-output
 
