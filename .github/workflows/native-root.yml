@@ -1,0 +1,37 @@
+name: Native root boot
+on:
+  push:
+    branches: [feat/raspi5-native-boot]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-root:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/checkout@v4
+        with:
+          repository: kitty-crow/mikuOS
+          ref: 3e8ca6a69d1c5b04de26ed1b1abb948b4a21e5cf
+          path: build/mikuos
+          submodules: false
+      - uses: actions/checkout@v4
+        with:
+          repository: kitty-crow/thistle
+          ref: 4d0f3d6401772a48298972100e43dec1909312d6
+          path: build/thistle
+          submodules: false
+      - uses: oven-sh/setup-bun@v2
+      - name: Tools
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends qemu-system-arm llvm lld
+      - name: Pack canonical mikuOS boot root
+        run: |
+          (cd build/mikuos && bun scripts/rei/pack-root.ts boot ../thistle/src/native/abi.ts ../root.vfs)
+      - name: Link Pi 5 native image
+        run: bash scripts/build-arm64.sh raspi5 build/root.vfs
+      - name: Boot canonical Thistle and mikuOS on Pi 3B
+        run: bash scripts/qemu-native-root.sh build/root.vfs
