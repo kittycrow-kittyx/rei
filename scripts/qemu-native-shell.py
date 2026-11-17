@@ -52,6 +52,7 @@ with tempfile.TemporaryDirectory(prefix="rei-shell-", dir="/tmp") as directory:
                     transcript.extend(chunk)
 
             expect(b"REI: MIKUOS NATIVE SHELL LOADED")
+            expect(b"Native VFS read PASS")
             expect(b"root@mikuos:~# ")
             nonce = secrets.token_hex(8).encode("ascii")
             uart.sendall(b"echo " + nonce + b"\r")
@@ -63,7 +64,7 @@ with tempfile.TemporaryDirectory(prefix="rei-shell-", dir="/tmp") as directory:
             expect(b"root@mikuos:~# ")
             uart.sendall(b"exit\r")
             expect(b"REI: MIKUOS SHELL EXIT")
-            print("PASS: native stdin, guest echo, kernel credentials and shell exit")
+            print("PASS: native VFS open/read/seek/close, stdin, guest echo, credentials and shell exit")
     finally:
         sys.stdout.buffer.write(transcript)
         sys.stdout.flush()

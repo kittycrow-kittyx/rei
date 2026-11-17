@@ -40,6 +40,7 @@ static void run_guest(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
     uint32_t program=component(mem,bin,scratch,"thsh-native.39");
     static const uint8_t argv0[]="/bin/thsh-native.39";
     status(K(tetoEnableHostStdin)(mem),"REI: HOST STDIN INIT FAILED");
+    status(K(tetoEnableNativeVfs)(mem),"REI: NATIVE VFS INIT FAILED");
 #ifdef REI_CIRCLE
     rei_platform_services_init();
 #endif
