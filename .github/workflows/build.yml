@@ -11,6 +11,37 @@ permissions:
   contents: read
 
 jobs:
+  source:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: toolchain
+        with:
+          app-id: ${{ vars.KITTYX_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.KITTYX_AUTOMATION_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-contents: read
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.toolchain.outputs.token }}
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerate Rust from the pinned toolchain
+        run: bash scripts/regenerate.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rusty-rei-generated-source
+          path: |
+            src/
+            Cargo.toml
+            crust.manifest.json
+          if-no-files-found: error
+      - name: Verify committed source matches regeneration
+        run: git diff --exit-code -- src Cargo.toml crust.manifest.json
   native:
     runs-on: ubuntu-latest
     steps:
@@ -22,6 +53,7 @@ jobs:
           test -f crust.manifest.json
           test -f src/lib.rs
           test -z "$(git ls-files -- '*.c' '*.h' '*.S')"
+          test -z "$(git ls-files -- dist platform target '*.o' '*.a' '*.so' '*.elf' '*.img' '*.bin' '*.wasm' '*.rlib')"
           test ! -e platform
           bash -n scripts/build.sh scripts/regenerate.sh scripts/verify-pins.sh
           grep -Fxq '#![no_std]' src/lib.rs
