@@ -94,8 +94,11 @@ void rei_native_start(void){
 #else
     rei_console_puts("REI: RASPI3B AARCH64 BOOT\n");
 #endif
+    rei_console_puts("REI: INITIALISING GENERATED GLOBALS\n");
     croissant_init_globals();
+    rei_console_puts("REI: GLOBALS READY\n");
     croissant_native_memory_ts__TetoMemory memory=M(directMemory)(64u*1024*1024,false);
+    rei_console_puts("REI: ARENA READY\n");
     status(K(tetoKernelInit)(memory,1,false),"REI: KERNEL INIT FAILED");
     require(K(tetoKernelValid)(memory),"REI: KERNEL VALIDATION FAILED\n");
     rei_console_puts("REI: CANONICAL KERNEL INIT PASS\n");
