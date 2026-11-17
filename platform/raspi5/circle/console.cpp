@@ -196,7 +196,7 @@ extern "C" int rei_sd_root_open(uint32_t *size) {
         return -1;
     }
     const auto length = f_size(&root_file);
-    if (length == 0 || length > 16u * 1024u * 1024u) {
+    if (length == 0 || length > 144u * 1024u * 1024u) {
         f_close(&root_file);
         f_unmount(RootDrive);
         return -1;

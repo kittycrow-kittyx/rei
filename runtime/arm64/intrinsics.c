@@ -1,6 +1,10 @@
 /* ARM64 native platform implementation of the Croissant buffer ABI. */
 #include "croissant/intrinsics.h"
+#ifdef REI_ROOT_SD
+#define POOL_SIZE (336u * 1024u * 1024u)
+#else
 #define POOL_SIZE (80u * 1024u * 1024u)
+#endif
 #define MAX_BUFFERS 64u
 #ifdef REI_CIRCLE
 /* Circle reserves physical memory for the framebuffer, PCIe and USB DMA. */
