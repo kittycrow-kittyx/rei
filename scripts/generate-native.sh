@@ -7,6 +7,12 @@ for dep in thistle bake croissant; do
   git -C "$dep" diff --quiet
   git -C "$dep" diff --cached --quiet
 done
+for dep in thistle bake croissant; do
+  if [[ "$dep" == thistle ]]; then contract=kittyx; else contract=vendor/kittyx; fi
+  git -C "$dep" submodule sync -- "$contract"
+  git -C "$dep" submodule update --init --jobs 2 -- "$contract"
+done
+bash scripts/verify-pins.sh
 for dep in bake croissant; do
   if [[ ! -x "$dep/node_modules/.bin/tsc" ]]; then
     if [[ -f "$dep/package-lock.json" ]]; then
@@ -28,3 +34,4 @@ fi
 for dep in thistle bake croissant; do
   printf '%s %s\n' "$dep" "$(git -C "$dep" rev-parse HEAD)"
 done > build/native-generated/revisions.txt
+printf 'kittyx %s\n' "$(git -C thistle ls-tree HEAD kittyx | awk '$1 == "160000" {print $3}')" >> build/native-generated/revisions.txt
