@@ -119,6 +119,10 @@ static void run_guest(croissant_native_memory_ts__TetoMemory mem,uint32_t root){
         }else if(result!=A(TETO_BATCH_BUDGET)){
             rei_console_puts("REI: GUEST STOPPED status=");
             rei_console_number((uint32_t)result);
+            rei_console_puts(" fault=");
+            rei_console_number(M(loadU32)(mem,A(TETO_HART_BASE)+A(H_FAULT)));
+            rei_console_puts(" instruction=");
+            rei_console_number(M(loadU32)(mem,A(TETO_HART_BASE)+A(H_LAST_INSTRUCTION)));
             rei_console_puts(" pc=");rei_console_number(K(tetoHartPc)(mem,0));
             rei_panic("\n");
         }

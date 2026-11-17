@@ -8,7 +8,7 @@ Canonical kernel: Thistle
 |---|---|
 | Thistle | 981cedbfa2a54e7d0b3bd05c24a4baae3bd39499 |
 | Bake | b6d6ad1c823f6a06b403a51e7deb87cf159e98f1 |
-| Croissant | 34f96bd859e456ff8d16df517891354e996ba6b5 |
+| Croissant | 07f172a71a343e2d86ea5c0db920fc8d0df3795b |
 | KITTYX | 6d6dbac796d59e8ea07c52cbcd3a0b7f181da163 |
 
 The native build generates fresh C and headers from these exact submodule
