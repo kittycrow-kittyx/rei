@@ -43,8 +43,9 @@ The pinned Thistle source supports host writes but not host reads;
 guest stdin requires a canonical Thistle change.
 
 Circle is GPL-3.0 licensed. Review applicable licence obligations before
-distributing linked images. This build and physical hardware path are
-not yet tested.
+distributing linked images. The embedded-root build, HDMI output, USB keyboard echo and SD sector
+reads were demonstrated on a physical Pi 5. The SD-root and network
+paths require separate hardware tests.
 
 ## Root on the SD card
 
@@ -64,3 +65,40 @@ Expected new output is REI: SD ROOT READ PASS followed by the canonical
 root mount and hello checks. The FAT reader cannot write to media. This
 is not a persistent writable guest filesystem, and the SD-root path
 requires physical testing. The original embedded-root build is retained.
+
+## Network driver acceptance
+
+The idle diagnostic initialises Circle's onboard Pi 5 MACB Ethernet
+controller, prints the MAC, reports link changes and polls for frames.
+It exposes bounded frame I/O through network.h. For the optional echo test, append rei.netprobe=1 to the SD boot
+cmdline.txt (one line). On an isolated test segment, run from a Linux
+peer using its wired interface and the MAC
+shown by Rei:
+
+    sudo python3 scripts/test-ethernet.py INTERFACE REI_MAC
+
+The peer sends a unicast experimental EtherType 0x88b5 frame containing
+a random nonce. Rei responds only to an addressed diagnostic request;
+the peer verifies the echoed nonce. A queued reply alone is not proof
+of TX. No IP stack, DHCP or guest sockets are provided by this test.
+
+Both embedded and SD-root images link Ethernet, Wi-Fi and their
+support libraries by default. There is no separate Wi-Fi kernel.
+Copy the three Pi 5 firmware files produced by Circle's pinned
+addon/wlan/firmware Makefile (target firmware5) into /firmware on the
+SD FAT boot volume. After the guest exits, the adapter mounts the FAT
+volume read-only and checks the firmware files before initialising
+the BCM4343x driver. Missing firmware skips Wi-Fi initialisation.
+Append rei.wifi=0 to cmdline.txt to skip Wi-Fi, or rei.net=0 to skip
+both controllers. These options disable initialisation, not linking.
+No firmware downloads occur during kernel compilation. Circle scheduler tasks
+serve the driver only; Thistle still owns guest scheduling. No access
+point association, credentials or WPA supplicant is configured yet.
+WPA2-Enterprise is not established by the upstream default sample.
+
+## Build distribution
+
+Keep kernel, compiler and driver source revisions pinned. The intended
+release process builds driver-linked Pi kernel artefacts on commits so
+consumers can use a prebuilt image instead of compiling Circle. During
+hardware bring-up all builds are local; no new CI workflow is enabled.

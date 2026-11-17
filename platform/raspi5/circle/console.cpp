@@ -16,10 +16,9 @@
 #include <SDCard/emmc.h>
 #include "console.h"
 #include "storage.h"
-#ifdef REI_ROOT_SD
+#include "network.h"
 #include <fatfs/ff.h>
-static_assert(FF_FS_READONLY == 1, "SD root must be read-only");
-#endif
+static_assert(FF_FS_READONLY == 1, "Platform FAT access must be read-only");
 
 extern "C" void rei_native_start(void);
 
@@ -224,9 +223,26 @@ extern "C" int rei_sd_root_close(void) {
 
 extern "C" void rei_console_idle(void) {
     probe_sd();
+    auto *options = CKernelOptions::Get();
+    if (options->GetAppOptionDecimal("rei.net", 1)) {
+        rei_net_ethernet_init();
+        if (options->GetAppOptionDecimal("rei.wifi", 1)) {
+            // The SD root reader has already closed and unmounted its archive.
+            static FATFS firmware_fs;
+            if (!initialise_sd() || f_mount(&firmware_fs, "SD:", 1) != FR_OK) {
+                f_unmount("SD:");
+                rei_console_puts("REI: WLAN FIRMWARE VOLUME UNAVAILABLE\n");
+            } else {
+                rei_net_wifi_init();
+            }
+        }
+    } else {
+        rei_console_puts("REI: NETWORK INITIALISATION DISABLED\n");
+    }
     rei_console_puts("REI: Keyboard echo test (not a shell).\n");
     for (;;) {
         rei_console_poll();
+        rei_net_poll();
         int c = rei_console_read();
         if (c >= 0) rei_console_char(c == '\r' ? '\n' : static_cast<char>(c));
     }
