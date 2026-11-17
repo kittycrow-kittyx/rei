@@ -30,3 +30,12 @@ buffer. Early ARM64 accesses use strict alignment.
 Only stdout/stderr host writes are implemented. HDMI, keyboard input,
 networking, entropy, persistence and interactive userspace are unfinished.
 Native C numeric semantics still require runtime parity tests.
+
+## Raspberry Pi hardware dependency
+
+Circle 51.1.1 is pinned at `7a81e1b480fe7d19fc1fc695b89bff0a0848f44b` in
+`vendor/circle`. It is present only on this hardware feature branch.
+Circle provides bare-metal screen, USB HID and supporting hardware services.
+It is GPL-3.0 licensed; distributing a linked image requires compliance
+with the applicable GPL terms. The direct UART build remains independent
+of Circle.

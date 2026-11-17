@@ -7,3 +7,6 @@
 [submodule "croissant"]
 	path = croissant
 	url = https://github.com/kitty-crow/croissant.git
+[submodule "vendor/circle"]
+	path = vendor/circle
+	url = https://github.com/rsta2/circle.git
