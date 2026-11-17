@@ -1,0 +1,34 @@
+name: Rusty Rei native build
+
+on:
+  push:
+    branches: [rusty-rei]
+  pull_request:
+    branches: [rusty-rei]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify committed Rust snapshot
+        shell: bash
+        run: |
+          test -f Cargo.toml
+          test -f crust.manifest.json
+          test -f src/lib.rs
+          test -z "$(git ls-files -- '*.c' '*.h' '*.S')"
+          test ! -e platform
+          bash -n scripts/build.sh scripts/regenerate.sh scripts/verify-pins.sh
+          grep -Fxq '#![no_std]' src/lib.rs
+          grep -Fxq '#![forbid(unsafe_code)]' src/lib.rs
+      - name: Install bare-metal targets
+        run: rustup target add x86_64-unknown-none aarch64-unknown-none
+      - name: Compile checked-in Rust with warnings denied
+        run: bash scripts/build.sh
+      - name: Verify clean checkout
+        run: test -z "$(git status --porcelain)"

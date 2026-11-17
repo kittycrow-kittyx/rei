@@ -7,7 +7,8 @@ case "${1:-all}" in
   *) echo "Usage: $0 [all|x86_64-unknown-none|aarch64-unknown-none]" >&2; exit 2 ;;
 esac
 if [[ ! -f Cargo.toml || ! -f src/lib.rs ]]; then
-  bash scripts/regenerate.sh
+  echo "Generated source snapshot is missing; run scripts/regenerate.sh explicitly" >&2
+  exit 1
 fi
 grep -Fxq '#![no_std]' src/lib.rs
 grep -Fxq '#![forbid(unsafe_code)]' src/lib.rs

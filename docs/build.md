@@ -1,16 +1,30 @@
 # Building Rusty Rei
 
-Install Git, Bun, Node.js, npm and Rustup. Access to Crust is required.
+## Compile the snapshot
+
+From a normal checkout, install the Rust targets and build:
+
+```sh
+rustup target add x86_64-unknown-none aarch64-unknown-none
+bash scripts/build.sh
+```
+
+The checked-in Rust files and Cargo manifest are sufficient. Submodules, Node.js, npm and Bun are not needed. The script builds both targets with warnings denied and at most two jobs, or accepts either target triple:
+
+```sh
+bash scripts/build.sh aarch64-unknown-none
+```
+
+Libraries are written to `target/<triple>/release/libcrust_kernel.rlib`. A downstream platform supplies the generated `Platform` trait implementation and links an image. Rusty Rei itself defines no boot protocol, board support or image layout.
+
+## Regenerate the snapshot
+
+Install Git, Bun, Node.js and npm and obtain access to the pinned compiler repositories.
 
 ```sh
 git submodule update --init --recursive
-rustup target add x86_64-unknown-none aarch64-unknown-none
 bash scripts/regenerate.sh
 bash scripts/build.sh
 ```
 
-The generation step calls Bake's shared native lowering with the Rust target and passes the resulting manifest to Crust. Generated Rust files, Cargo.toml and crust.manifest.json are copied to the repository root. Review and commit these generated files as a snapshot when updating the pins.
-
-The build script compiles both targets at reduced process priority with two jobs and warnings denied. It can also compile either target individually by accepting its target triple.
-
-The generated crate is built without the standard library and forbids unsafe Rust. Its platform intrinsics are abstract; no board, boot code or image layout is specified here. Native libraries can be linked by downstream platform implementations. Generic kernel functions require a concrete Platform implementation before final executable code is produced.
+Bake lowers the pinned canonical Thistle source and Crust emits Rust. Review and commit the regenerated source, Cargo manifest and compiler manifest together. Do not edit generated kernel modules independently.
