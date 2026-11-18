@@ -52,7 +52,7 @@ int64_t croissant_core_rv64_word_ts__rv64RegisterWordValue(uint32_t funct3, uint
 
 
 int32_t croissant_core_rv64_word_ts__rv64ImmediateWordValid(uint32_t funct3, uint32_t instruction) {
-  double top = ((uint32_t)(instruction) >> ((uint32_t)(25) & 31U));
+  double top = croissant_js_ushr(instruction, 25);
   if (funct3 == 0) {
     return 1;
   }
@@ -67,7 +67,7 @@ int32_t croissant_core_rv64_word_ts__rv64ImmediateWordValid(uint32_t funct3, uin
 
 
 int64_t croissant_core_rv64_word_ts__rv64ImmediateWordValue(uint32_t funct3, uint32_t instruction, int64_t left) {
-  uint64_t shift = croissant_core_rv64_numbers_ts__word(croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(20) & 31U)), 31));
+  uint64_t shift = croissant_core_rv64_numbers_ts__word(croissant_js_and(croissant_js_ushr(instruction, 20), 31));
   if (funct3 == 0) {
     return croissant_core_rv64_numbers_ts__sx((left + croissant_core_rv64_numbers_ts__word(croissant_vm_rv64_immediate_ts__rv64ImmediateI(instruction))), 32);
   }
@@ -75,7 +75,7 @@ int64_t croissant_core_rv64_word_ts__rv64ImmediateWordValue(uint32_t funct3, uin
     return croissant_core_rv64_numbers_ts__sx((croissant_core_rv64_numbers_ts__sx(left, 32) << shift), 32);
   }
   if (funct3 == 5) {
-    return croissant_core_rv64_numbers_ts__sx(((((uint32_t)(instruction) >> ((uint32_t)(25) & 31U)) == 0) ? (croissant_core_rv64_numbers_ts__u32word(left) >> shift) : (croissant_core_rv64_numbers_ts__sx(left, 32) >> shift)), 32);
+    return croissant_core_rv64_numbers_ts__sx(((croissant_js_ushr(instruction, 25) == 0) ? (croissant_core_rv64_numbers_ts__u32word(left) >> shift) : (croissant_core_rv64_numbers_ts__sx(left, 32) >> shift)), 32);
   }
   return UINT64_C(0);
 }

@@ -16,7 +16,7 @@ uint64_t croissant_core_rv64_numbers_ts__u32word(int64_t value) {
 }
 
 
-int64_t croissant_core_rv64_numbers_ts__word(uint32_t value) {
+int64_t croissant_core_rv64_numbers_ts__word(int64_t value) {
   return __bake_c_bigint(value);
 }
 

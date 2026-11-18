@@ -3,7 +3,7 @@
 #define CROISSANT_MODULE_NATIVE_WORD_H
 #include "croissant/types.h"
 
-int64_t croissant_native_word_ts__word(uint32_t value);
+int64_t croissant_native_word_ts__word(int64_t value);
 int64_t croissant_native_word_ts__sx(uint64_t value, int32_t bits);
 uint64_t croissant_native_word_ts__ux(uint64_t value);
 uint64_t croissant_native_word_ts__u32word(uint64_t value);

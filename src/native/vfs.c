@@ -158,7 +158,7 @@ bool croissant_native_vfs_ts__allowed(croissant_native_memory_ts__TetoMemory mem
   double group = croissant_native_memory_ts__loadU32(memory, (state + croissant_native_abi_ts__V_GID));
   double gid = croissant_native_memory_ts__loadU32(memory, (proc + croissant_native_abi_ts__P_FSGID));
   uint32_t shift = ((uid == owner) ? 6 : (((gid == group) || croissant_native_vfs_ts__inSupplementaryGroup(memory, proc, group)) ? 3 : 0));
-  return ((croissant_js_and((((uint32_t)(croissant_native_memory_ts__loadU32(memory, (state + croissant_native_abi_ts__V_MODE))) >> ((uint32_t)(shift) & 31U))), bits)) == bits);
+  return ((croissant_js_and((croissant_js_ushr(croissant_native_memory_ts__loadU32(memory, (state + croissant_native_abi_ts__V_MODE)), shift)), bits)) == bits);
 }
 
 
