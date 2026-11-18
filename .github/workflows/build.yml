@@ -31,6 +31,19 @@ jobs:
             docs/bake-manifest.json
             SHA256SUMS
           if-no-files-found: error
+      - name: Build freshly regenerated C for host and bare-metal targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B build/regenerated-native
+          cmake --build build/regenerated-native --parallel 2
+          for triple in x86_64-unknown-none-elf aarch64-none-elf; do
+            while IFS= read -r -d '' source; do
+              output="build/regenerated-cross/$triple/${source#src/}.o"
+              mkdir -p "$(dirname "$output")"
+              clang --target="$triple" -std=c11 -O1 -ffreestanding -fno-builtin -fno-stack-protector -Werror -Iinclude -c "$source" -o "$output"
+            done < <(find src -type f -name '*.c' -print0)
+          done
       - name: Verify committed source matches regeneration
         run: |
           git add -A -- src include CMakeLists.txt croissant.manifest.json docs/bake-manifest.json SHA256SUMS
