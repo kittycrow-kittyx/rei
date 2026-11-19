@@ -135,7 +135,7 @@ int32_t croissant_native_memory_ts__compareExchangeI32(croissant_native_memory_t
     __bake_c_abort_range();
   }
   __bake_c_I32Array view = croissant_native_memory_ts__words(memory);
-  double index = ((uint32_t)(at) >> ((uint32_t)(2) & 31U));
+  double index = croissant_js_ushr(at, 2);
   if ((memory).shared) {
     return __bake_c_atomic_cmpxchg_i32(view, index, expected, replacement);
   }
@@ -153,7 +153,7 @@ int32_t croissant_native_memory_ts__atomicAddI32(croissant_native_memory_ts__Tet
     __bake_c_abort_range();
   }
   __bake_c_I32Array view = croissant_native_memory_ts__words(memory);
-  double index = ((uint32_t)(at) >> ((uint32_t)(2) & 31U));
+  double index = croissant_js_ushr(at, 2);
   if ((memory).shared) {
     return __bake_c_atomic_add_i32(view, index, value);
   }
@@ -169,7 +169,7 @@ void croissant_native_memory_ts__atomicStoreI32(croissant_native_memory_ts__Teto
     __bake_c_abort_range();
   }
   __bake_c_I32Array view = croissant_native_memory_ts__words(memory);
-  double index = ((uint32_t)(at) >> ((uint32_t)(2) & 31U));
+  double index = croissant_js_ushr(at, 2);
   if ((memory).shared) {
     __bake_c_atomic_store_i32(view, index, value);
   } else {
@@ -184,7 +184,7 @@ int32_t croissant_native_memory_ts__atomicLoadI32(croissant_native_memory_ts__Te
     __bake_c_abort_range();
   }
   __bake_c_I32Array view = croissant_native_memory_ts__words(memory);
-  double index = ((uint32_t)(at) >> ((uint32_t)(2) & 31U));
+  double index = croissant_js_ushr(at, 2);
   return ((memory).shared ? __bake_c_atomic_load_i32(view, index) : __bake_c_i32_get(view, index));
 }
 
@@ -195,7 +195,7 @@ uint64_t croissant_native_memory_ts__atomicLoadU64(croissant_native_memory_ts__T
     __bake_c_abort_range();
   }
   if ((memory).shared) {
-    return __bake_c_atomic_load_u64(__bake_c_new_u64_array((memory).buffer), ((uint32_t)(at) >> ((uint32_t)(3) & 31U)));
+    return __bake_c_atomic_load_u64(__bake_c_new_u64_array((memory).buffer), croissant_js_ushr(at, 3));
   }
   return __bake_c_view_get_u64((memory).view, at, true);
 }
@@ -207,7 +207,7 @@ void croissant_native_memory_ts__atomicStoreU64(croissant_native_memory_ts__Teto
     __bake_c_abort_range();
   }
   if ((memory).shared) {
-    __bake_c_atomic_store_u64(__bake_c_new_u64_array((memory).buffer), ((uint32_t)(at) >> ((uint32_t)(3) & 31U)), croissant_native_memory_ts__ux64(value));
+    __bake_c_atomic_store_u64(__bake_c_new_u64_array((memory).buffer), croissant_js_ushr(at, 3), croissant_native_memory_ts__ux64(value));
   } else {
     __bake_c_view_set_u64((memory).view, at, croissant_native_memory_ts__ux64(value), true);
   }
@@ -220,7 +220,7 @@ uint64_t croissant_native_memory_ts__atomicAddU64(croissant_native_memory_ts__Te
     __bake_c_abort_range();
   }
   if ((memory).shared) {
-    return __bake_c_atomic_add_u64(__bake_c_new_u64_array((memory).buffer), ((uint32_t)(at) >> ((uint32_t)(3) & 31U)), croissant_native_memory_ts__ux64(value));
+    return __bake_c_atomic_add_u64(__bake_c_new_u64_array((memory).buffer), croissant_js_ushr(at, 3), croissant_native_memory_ts__ux64(value));
   }
   uint64_t old = __bake_c_view_get_u64((memory).view, at, true);
   __bake_c_view_set_u64((memory).view, at, croissant_native_memory_ts__ux64((old + value)), true);

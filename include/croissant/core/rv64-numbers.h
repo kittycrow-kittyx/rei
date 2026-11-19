@@ -6,5 +6,5 @@
 int64_t croissant_core_rv64_numbers_ts__sx(int64_t value, int32_t bits);
 uint64_t croissant_core_rv64_numbers_ts__ux(int64_t value);
 uint64_t croissant_core_rv64_numbers_ts__u32word(int64_t value);
-int64_t croissant_core_rv64_numbers_ts__word(uint32_t value);
+int64_t croissant_core_rv64_numbers_ts__word(int64_t value);
 #endif /* CROISSANT_MODULE_CORE_RV64_NUMBERS_H */

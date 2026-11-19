@@ -9,17 +9,17 @@ int32_t croissant_vm_rv64_immediate_ts__signExtend(uint32_t raw, int32_t bits) {
 
 
 int32_t croissant_vm_rv64_immediate_ts__rv64ImmediateI(uint32_t instruction) {
-  return croissant_vm_rv64_immediate_ts__signExtend(((uint32_t)(instruction) >> ((uint32_t)(20) & 31U)), 12);
+  return croissant_vm_rv64_immediate_ts__signExtend(croissant_js_ushr(instruction, 20), 12);
 }
 
 
 int32_t croissant_vm_rv64_immediate_ts__rv64ImmediateS(uint32_t instruction) {
-  return croissant_vm_rv64_immediate_ts__signExtend(croissant_js_or(croissant_js_shl((((uint32_t)(instruction) >> ((uint32_t)(25) & 31U))), 5), (croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 31))), 12);
+  return croissant_vm_rv64_immediate_ts__signExtend(croissant_js_or(croissant_js_shl((croissant_js_ushr(instruction, 25)), 5), (croissant_js_and(croissant_js_ushr(instruction, 7), 31))), 12);
 }
 
 
 int32_t croissant_vm_rv64_immediate_ts__rv64ImmediateB(uint32_t instruction) {
-  return croissant_vm_rv64_immediate_ts__signExtend(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_shl((((uint32_t)(instruction) >> ((uint32_t)(31) & 31U))), 12), croissant_js_shl((croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 1)), 11)), croissant_js_shl((croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(25) & 31U)), 63)), 5)), croissant_js_shl((croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(8) & 31U)), 15)), 1)), 13);
+  return croissant_vm_rv64_immediate_ts__signExtend(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_shl((croissant_js_ushr(instruction, 31)), 12), croissant_js_shl((croissant_js_and(croissant_js_ushr(instruction, 7), 1)), 11)), croissant_js_shl((croissant_js_and(croissant_js_ushr(instruction, 25), 63)), 5)), croissant_js_shl((croissant_js_and(croissant_js_ushr(instruction, 8), 15)), 1)), 13);
 }
 
 
@@ -29,11 +29,11 @@ int32_t croissant_vm_rv64_immediate_ts__rv64ImmediateU(uint32_t instruction) {
 
 
 int32_t croissant_vm_rv64_immediate_ts__rv64ImmediateJ(uint32_t instruction) {
-  return croissant_vm_rv64_immediate_ts__signExtend(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_shl((((uint32_t)(instruction) >> ((uint32_t)(31) & 31U))), 20), croissant_js_shl((croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(12) & 31U)), 255)), 12)), croissant_js_shl((croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(20) & 31U)), 1)), 11)), croissant_js_shl((croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(21) & 31U)), 1023)), 1)), 21);
+  return croissant_vm_rv64_immediate_ts__signExtend(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_shl((croissant_js_ushr(instruction, 31)), 20), croissant_js_shl((croissant_js_and(croissant_js_ushr(instruction, 12), 255)), 12)), croissant_js_shl((croissant_js_and(croissant_js_ushr(instruction, 20), 1)), 11)), croissant_js_shl((croissant_js_and(croissant_js_ushr(instruction, 21), 1023)), 1)), 21);
 }
 
 
 int32_t croissant_vm_rv64_immediate_ts__rv64CompressedJump(uint32_t instruction) {
-  return croissant_vm_rv64_immediate_ts__signExtend(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or((croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(1) & 31U)), 2048)), (croissant_js_and(croissant_js_shl(instruction, 2), 1024))), (croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(1) & 31U)), 768))), (croissant_js_and(croissant_js_shl(instruction, 1), 128))), (croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(1) & 31U)), 64))), (croissant_js_and(croissant_js_shl(instruction, 3), 32))), (croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 16))), (croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 14))), 12);
+  return croissant_vm_rv64_immediate_ts__signExtend(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or((croissant_js_and(croissant_js_ushr(instruction, 1), 2048)), (croissant_js_and(croissant_js_shl(instruction, 2), 1024))), (croissant_js_and(croissant_js_ushr(instruction, 1), 768))), (croissant_js_and(croissant_js_shl(instruction, 1), 128))), (croissant_js_and(croissant_js_ushr(instruction, 1), 64))), (croissant_js_and(croissant_js_shl(instruction, 3), 32))), (croissant_js_and(croissant_js_ushr(instruction, 7), 16))), (croissant_js_and(croissant_js_ushr(instruction, 2), 14))), 12);
 }
 

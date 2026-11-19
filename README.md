@@ -1,8 +1,9 @@
 # Rei
 
-**REI** stands for **Rei Executes Independently**.
+**REI**: Rei Executes Independently.
 
-Rei is a platform-independent, freestanding C kernel. Its generated C and headers are committed source snapshots, not an independently maintained kernel.
+Rei is a platform-independent freestanding C kernel generated from Thistle.
+The repository contains the generated source and headers.
 
 ## Build
 
@@ -11,8 +12,15 @@ cmake -S . -B build
 cmake --build build --parallel 2
 ```
 
-Compilation produces local relocatable objects. No compiled objects, binaries, images or platform implementations are committed to main.
+The build produces relocatable objects. Board support, drivers, intrinsic
+implementations and image linking belong to platform integrations.
 
 ## Source generation
 
-The pinned Thistle, Bake and Croissant submodules define the source and generator revisions. GitHub Actions regenerates the C source and verifies it against the committed snapshot. See [build instructions](docs/build.md) and [provenance](docs/provenance.md).
+The pinned Thistle, Bake and Croissant revisions define the source snapshot.
+See [build instructions](docs/build.md) for regeneration and
+[provenance](docs/provenance.md) for the exact revisions.
+
+## Licence
+
+[MIT](LICENSE).

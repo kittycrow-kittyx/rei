@@ -1939,7 +1939,7 @@ void croissant_native_kernel_ts__putFloating(croissant_native_memory_ts__TetoMem
 
 
 int32_t croissant_native_kernel_ts__floatingRoundMode(croissant_native_memory_ts__TetoMemory memory, uint32_t hart, uint32_t encoded) {
-  double mode = ((encoded == 7) ? croissant_js_and(((uint32_t)(croissant_native_memory_ts__loadU32(memory, (croissant_native_kernel_ts__hartAt(hart) + croissant_native_abi_ts__H_FCSR))) >> ((uint32_t)(5) & 31U)), 7) : encoded);
+  double mode = ((encoded == 7) ? croissant_js_and(croissant_js_ushr(croissant_native_memory_ts__loadU32(memory, (croissant_native_kernel_ts__hartAt(hart) + croissant_native_abi_ts__H_FCSR)), 5), 7) : encoded);
   return ((mode > 4) ? (-1) : mode);
 }
 
@@ -2004,13 +2004,13 @@ int64_t croissant_native_kernel_ts__floatingToInteger(croissant_native_memory_ts
 
 
 bool croissant_native_kernel_ts__floatingMultiplyAdd(croissant_native_memory_ts__TetoMemory memory, uint32_t hart, uint32_t opcode, uint32_t destination, uint32_t instruction, uint32_t sourceA, uint32_t sourceB) {
-  double sourceC = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(27) & 31U)), 31);
-  double format = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(25) & 31U)), 3);
+  double sourceC = croissant_js_and(croissant_js_ushr(instruction, 27), 31);
+  double format = croissant_js_and(croissant_js_ushr(instruction, 25), 3);
   bool single = (format == 0);
   if ((!single) && (format != 1)) {
     return false;
   }
-  if (croissant_native_kernel_ts__floatingRoundMode(memory, hart, croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(12) & 31U)), 7)) < 0) {
+  if (croissant_native_kernel_ts__floatingRoundMode(memory, hart, croissant_js_and(croissant_js_ushr(instruction, 12), 7)) < 0) {
     return false;
   }
   double left = croissant_native_kernel_ts__floatingValue(memory, hart, sourceA, single);
@@ -2217,7 +2217,7 @@ bool croissant_native_kernel_ts__opRegisterWord(croissant_native_memory_ts__Teto
 
 
 bool croissant_native_kernel_ts__csr(croissant_native_memory_ts__TetoMemory memory, uint32_t hart, uint32_t croissant_register, uint32_t funct3, uint32_t instruction, int64_t left, uint32_t source, int64_t nowMicros) {
-  double id = ((uint32_t)(instruction) >> ((uint32_t)(20) & 31U));
+  double id = croissant_js_ushr(instruction, 20);
   bool writable = ((id >= 1) && (id <= 3));
   int64_t old;
   if ((id == 3072) || (id == 3074)) {
@@ -2230,7 +2230,7 @@ bool croissant_native_kernel_ts__csr(croissant_native_memory_ts__TetoMemory memo
         (old = croissant_native_word_ts__word(croissant_js_and(croissant_native_memory_ts__loadU32(memory, (croissant_native_kernel_ts__hartAt(hart) + croissant_native_abi_ts__H_FCSR)), 31)));
       } else {
         if (id == 2) {
-          (old = croissant_native_word_ts__word(croissant_js_and(((uint32_t)(croissant_native_memory_ts__loadU32(memory, (croissant_native_kernel_ts__hartAt(hart) + croissant_native_abi_ts__H_FCSR))) >> ((uint32_t)(5) & 31U)), 7)));
+          (old = croissant_native_word_ts__word(croissant_js_and(croissant_js_ushr(croissant_native_memory_ts__loadU32(memory, (croissant_native_kernel_ts__hartAt(hart) + croissant_native_abi_ts__H_FCSR)), 5), 7)));
         } else {
           if (id == 3) {
             (old = croissant_native_word_ts__word(croissant_js_and(croissant_native_memory_ts__loadU32(memory, (croissant_native_kernel_ts__hartAt(hart) + croissant_native_abi_ts__H_FCSR)), 255)));
@@ -2272,7 +2272,7 @@ int32_t croissant_native_kernel_ts__atomicInstruction(croissant_native_memory_ts
     return croissant_native_abi_ts__TETO_BATCH_FAULT;
   }
   double size = ((funct3 == 2) ? 4 : 8);
-  double fn = ((uint32_t)(instruction) >> ((uint32_t)(27) & 31U));
+  double fn = croissant_js_ushr(instruction, 27);
   double permission = ((fn == 2) ? croissant_native_abi_ts__TETO_SEGMENT_READ : croissant_js_or(croissant_native_abi_ts__TETO_SEGMENT_READ, croissant_native_abi_ts__TETO_SEGMENT_WRITE));
   if (!croissant_native_kernel_ts__guestAllowed(memory, hart, croissant_native_word_ts__ux(address), size, permission)) {
     return croissant_native_abi_ts__TETO_BATCH_FAULT;
@@ -2288,7 +2288,7 @@ int32_t croissant_native_kernel_ts__atomicInstruction(croissant_native_memory_ts
   double at = croissant_native_kernel_ts__hartAt(hart);
   uint64_t old = ((funct3 == 2) ? croissant_native_word_ts__word(croissant_native_memory_ts__loadI32(memory, pointer)) : croissant_native_memory_ts__loadI64(memory, pointer));
   if (fn == 2) {
-    if ((croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(20) & 31U)), 31)) != 0) {
+    if ((croissant_js_and(croissant_js_ushr(instruction, 20), 31)) != 0) {
       croissant_native_kernel_ts__release(memory, lockAt);
       return croissant_native_abi_ts__TETO_BATCH_FAULT;
     }
@@ -2848,52 +2848,52 @@ int32_t croissant_native_kernel_ts__kernelSyscall(croissant_native_memory_ts__Te
 
 int32_t croissant_native_kernel_ts__compressedStep(croissant_native_memory_ts__TetoMemory memory, uint32_t hart, uint32_t instruction, uint64_t atPc) {
   double quadrant = croissant_js_and(instruction, 3);
-  double funct = ((uint32_t)(instruction) >> ((uint32_t)(13) & 31U));
-  double rd = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 31);
-  double rs = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 31);
-  double primeRd = (8 + (croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 7)));
-  double primeRs = (8 + (croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 7)));
-  uint64_t immediate = croissant_native_word_ts__sx(croissant_native_word_ts__word(croissant_js_or((croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 32)), (croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 31)))), 6);
+  double funct = croissant_js_ushr(instruction, 13);
+  double rd = croissant_js_and(croissant_js_ushr(instruction, 7), 31);
+  double rs = croissant_js_and(croissant_js_ushr(instruction, 2), 31);
+  double primeRd = (8 + (croissant_js_and(croissant_js_ushr(instruction, 7), 7)));
+  double primeRs = (8 + (croissant_js_and(croissant_js_ushr(instruction, 2), 7)));
+  uint64_t immediate = croissant_native_word_ts__sx(croissant_native_word_ts__word(croissant_js_or((croissant_js_and(croissant_js_ushr(instruction, 7), 32)), (croissant_js_and(croissant_js_ushr(instruction, 2), 31)))), 6);
   if (quadrant == 0) {
     if (funct == 0) {
-      double value = croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(1) & 31U)), 960), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 48)), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 8)), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(4) & 31U)), 4));
+      double value = croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_ushr(instruction, 1), 960), croissant_js_and(croissant_js_ushr(instruction, 7), 48)), croissant_js_and(croissant_js_ushr(instruction, 2), 8)), croissant_js_and(croissant_js_ushr(instruction, 4), 4));
       if (value == 0) {
         return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_INSTRUCTION, instruction);
       }
       croissant_native_kernel_ts__setX(memory, hart, primeRs, (croissant_native_kernel_ts__x(memory, hart, 2) + croissant_native_word_ts__word(value)));
     } else {
       if (funct == 1) {
-        double offset = croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 192), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 56));
+        double offset = croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 192), croissant_js_and(croissant_js_ushr(instruction, 7), 56));
         if (!croissant_native_kernel_ts__loadFloating(memory, hart, primeRs, 3, (croissant_native_kernel_ts__x(memory, hart, primeRd) + croissant_native_word_ts__word(offset)))) {
           return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
         }
       } else {
         if (funct == 2) {
-          double offset = croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 64), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 56)), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(4) & 31U)), 4));
+          double offset = croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 64), croissant_js_and(croissant_js_ushr(instruction, 7), 56)), croissant_js_and(croissant_js_ushr(instruction, 4), 4));
           if (!croissant_native_kernel_ts__loadInteger(memory, hart, primeRs, 2, (croissant_native_kernel_ts__x(memory, hart, primeRd) + croissant_native_word_ts__word(offset)))) {
             return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
           }
         } else {
           if (funct == 3) {
-            double offset = croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 192), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 56));
+            double offset = croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 192), croissant_js_and(croissant_js_ushr(instruction, 7), 56));
             if (!croissant_native_kernel_ts__loadInteger(memory, hart, primeRs, 3, (croissant_native_kernel_ts__x(memory, hart, primeRd) + croissant_native_word_ts__word(offset)))) {
               return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
             }
           } else {
             if (funct == 5) {
-              double offset = croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 192), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 56));
+              double offset = croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 192), croissant_js_and(croissant_js_ushr(instruction, 7), 56));
               if (!croissant_native_kernel_ts__storeFloating(memory, hart, primeRs, 3, (croissant_native_kernel_ts__x(memory, hart, primeRd) + croissant_native_word_ts__word(offset)))) {
                 return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
               }
             } else {
               if (funct == 6) {
-                double offset = croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 64), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 56)), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(4) & 31U)), 4));
+                double offset = croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 64), croissant_js_and(croissant_js_ushr(instruction, 7), 56)), croissant_js_and(croissant_js_ushr(instruction, 4), 4));
                 if (!croissant_native_kernel_ts__storeInteger(memory, hart, 2, (croissant_native_kernel_ts__x(memory, hart, primeRd) + croissant_native_word_ts__word(offset)), croissant_native_kernel_ts__x(memory, hart, primeRs))) {
                   return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
                 }
               } else {
                 if (funct == 7) {
-                  double offset = croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 192), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 56));
+                  double offset = croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 1), 192), croissant_js_and(croissant_js_ushr(instruction, 7), 56));
                   if (!croissant_native_kernel_ts__storeInteger(memory, hart, 3, (croissant_native_kernel_ts__x(memory, hart, primeRd) + croissant_native_word_ts__word(offset)), croissant_native_kernel_ts__x(memory, hart, primeRs))) {
                     return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
                   }
@@ -2923,7 +2923,7 @@ int32_t croissant_native_kernel_ts__compressedStep(croissant_native_memory_ts__T
         } else {
           if (funct == 3) {
             if (rd == 2) {
-              double value = croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(3) & 31U)), 512), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 16)), croissant_js_and(croissant_js_shl(instruction, 1), 64)), croissant_js_and(croissant_js_shl(instruction, 4), 384)), croissant_js_and(croissant_js_shl(instruction, 3), 32));
+              double value = croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_ushr(instruction, 3), 512), croissant_js_and(croissant_js_ushr(instruction, 2), 16)), croissant_js_and(croissant_js_shl(instruction, 1), 64)), croissant_js_and(croissant_js_shl(instruction, 4), 384)), croissant_js_and(croissant_js_shl(instruction, 3), 32));
               uint64_t offset = croissant_native_word_ts__sx(croissant_native_word_ts__word(value), 10);
               if (offset == UINT64_C(0)) {
                 return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_INSTRUCTION, instruction);
@@ -2938,8 +2938,8 @@ int32_t croissant_native_kernel_ts__compressedStep(croissant_native_memory_ts__T
             }
           } else {
             if (funct == 4) {
-              double funct2 = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(10) & 31U)), 3);
-              uint64_t shift = croissant_native_word_ts__word(croissant_js_or((croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 32)), (croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 31))));
+              double funct2 = croissant_js_and(croissant_js_ushr(instruction, 10), 3);
+              uint64_t shift = croissant_native_word_ts__word(croissant_js_or((croissant_js_and(croissant_js_ushr(instruction, 7), 32)), (croissant_js_and(croissant_js_ushr(instruction, 2), 31))));
               if (funct2 == 0) {
                 croissant_native_kernel_ts__setX(memory, hart, primeRd, (croissant_native_word_ts__ux(croissant_native_kernel_ts__x(memory, hart, primeRd)) >> shift));
               } else {
@@ -2949,8 +2949,8 @@ int32_t croissant_native_kernel_ts__compressedStep(croissant_native_memory_ts__T
                   if (funct2 == 2) {
                     croissant_native_kernel_ts__setX(memory, hart, primeRd, (croissant_native_kernel_ts__x(memory, hart, primeRd) & immediate));
                   } else {
-                    double high = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(12) & 31U)), 1);
-                    double low = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(5) & 31U)), 3);
+                    double high = croissant_js_and(croissant_js_ushr(instruction, 12), 1);
+                    double low = croissant_js_and(croissant_js_ushr(instruction, 5), 3);
                     uint64_t left = croissant_native_kernel_ts__x(memory, hart, primeRd);
                     uint64_t right = croissant_native_kernel_ts__x(memory, hart, primeRs);
                     if ((high == 0) && (low == 0)) {
@@ -2986,7 +2986,7 @@ int32_t croissant_native_kernel_ts__compressedStep(croissant_native_memory_ts__T
                 croissant_native_kernel_ts__setPc(memory, hart, (atPc + croissant_native_word_ts__ux(croissant_native_kernel_ts__compressedJump(instruction))));
               } else {
                 if ((funct == 6) || (funct == 7)) {
-                  double value = croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(4) & 31U)), 256), croissant_js_and(croissant_js_shl(instruction, 1), 192)), croissant_js_and(croissant_js_shl(instruction, 3), 32)), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 24)), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 6));
+                  double value = croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_ushr(instruction, 4), 256), croissant_js_and(croissant_js_shl(instruction, 1), 192)), croissant_js_and(croissant_js_shl(instruction, 3), 32)), croissant_js_and(croissant_js_ushr(instruction, 7), 24)), croissant_js_and(croissant_js_ushr(instruction, 2), 6));
                   if ((funct == 6) ? (croissant_native_kernel_ts__x(memory, hart, primeRd) == UINT64_C(0)) : (croissant_native_kernel_ts__x(memory, hart, primeRd) != UINT64_C(0))) {
                     croissant_native_kernel_ts__setPc(memory, hart, (atPc + croissant_native_word_ts__ux(croissant_native_word_ts__sx(croissant_native_word_ts__word(value), 9))));
                   }
@@ -3003,32 +3003,32 @@ int32_t croissant_native_kernel_ts__compressedStep(croissant_native_memory_ts__T
   }
   if (quadrant == 2) {
     if (funct == 0) {
-      uint64_t shift = croissant_native_word_ts__word(croissant_js_or((croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 32)), (croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 31))));
+      uint64_t shift = croissant_native_word_ts__word(croissant_js_or((croissant_js_and(croissant_js_ushr(instruction, 7), 32)), (croissant_js_and(croissant_js_ushr(instruction, 2), 31))));
       if (rd == 0) {
         return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_INSTRUCTION, instruction);
       }
       croissant_native_kernel_ts__setX(memory, hart, rd, (croissant_native_word_ts__ux(croissant_native_kernel_ts__x(memory, hart, rd)) << shift));
     } else {
       if (funct == 1) {
-        double offset = croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 4), 448), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 32)), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 24));
+        double offset = croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 4), 448), croissant_js_and(croissant_js_ushr(instruction, 7), 32)), croissant_js_and(croissant_js_ushr(instruction, 2), 24));
         if ((rd == 0) || (!croissant_native_kernel_ts__loadFloating(memory, hart, rd, 3, (croissant_native_kernel_ts__x(memory, hart, 2) + croissant_native_word_ts__word(offset))))) {
           return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
         }
       } else {
         if (funct == 2) {
-          double offset = croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 4), 192), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 32)), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 28));
+          double offset = croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 4), 192), croissant_js_and(croissant_js_ushr(instruction, 7), 32)), croissant_js_and(croissant_js_ushr(instruction, 2), 28));
           if ((rd == 0) || (!croissant_native_kernel_ts__loadInteger(memory, hart, rd, 2, (croissant_native_kernel_ts__x(memory, hart, 2) + croissant_native_word_ts__word(offset))))) {
             return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
           }
         } else {
           if (funct == 3) {
-            double offset = croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 4), 448), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 32)), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(2) & 31U)), 24));
+            double offset = croissant_js_or(croissant_js_or(croissant_js_and(croissant_js_shl(instruction, 4), 448), croissant_js_and(croissant_js_ushr(instruction, 7), 32)), croissant_js_and(croissant_js_ushr(instruction, 2), 24));
             if ((rd == 0) || (!croissant_native_kernel_ts__loadInteger(memory, hart, rd, 3, (croissant_native_kernel_ts__x(memory, hart, 2) + croissant_native_word_ts__word(offset))))) {
               return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
             }
           } else {
             if (funct == 4) {
-              double high = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(12) & 31U)), 1);
+              double high = croissant_js_and(croissant_js_ushr(instruction, 12), 1);
               if ((high == 0) && (rs == 0)) {
                 if (rd == 0) {
                   return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_INSTRUCTION, instruction);
@@ -3059,19 +3059,19 @@ int32_t croissant_native_kernel_ts__compressedStep(croissant_native_memory_ts__T
               }
             } else {
               if (funct == 5) {
-                double offset = croissant_js_or(croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(1) & 31U)), 448), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 56));
+                double offset = croissant_js_or(croissant_js_and(croissant_js_ushr(instruction, 1), 448), croissant_js_and(croissant_js_ushr(instruction, 7), 56));
                 if (!croissant_native_kernel_ts__storeFloating(memory, hart, rs, 3, (croissant_native_kernel_ts__x(memory, hart, 2) + croissant_native_word_ts__word(offset)))) {
                   return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
                 }
               } else {
                 if (funct == 6) {
-                  double offset = croissant_js_or(croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(1) & 31U)), 192), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 60));
+                  double offset = croissant_js_or(croissant_js_and(croissant_js_ushr(instruction, 1), 192), croissant_js_and(croissant_js_ushr(instruction, 7), 60));
                   if (!croissant_native_kernel_ts__storeInteger(memory, hart, 2, (croissant_native_kernel_ts__x(memory, hart, 2) + croissant_native_word_ts__word(offset)), croissant_native_kernel_ts__x(memory, hart, rs))) {
                     return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
                   }
                 } else {
                   if (funct == 7) {
-                    double offset = croissant_js_or(croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(1) & 31U)), 448), croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 56));
+                    double offset = croissant_js_or(croissant_js_and(croissant_js_ushr(instruction, 1), 448), croissant_js_and(croissant_js_ushr(instruction, 7), 56));
                     if (!croissant_native_kernel_ts__storeInteger(memory, hart, 3, (croissant_native_kernel_ts__x(memory, hart, 2) + croissant_native_word_ts__word(offset)), croissant_native_kernel_ts__x(memory, hart, rs))) {
                       return croissant_native_kernel_ts__fault(memory, hart, croissant_native_abi_ts__TETO_FAULT_MEMORY, instruction);
                     }
@@ -3109,11 +3109,11 @@ int32_t croissant_native_kernel_ts__step(croissant_native_memory_ts__TetoMemory 
   croissant_native_memory_ts__storeU32(memory, (base + croissant_native_abi_ts__H_LAST_INSTRUCTION), instruction);
   croissant_native_kernel_ts__setPc(memory, hart, (atPc + UINT64_C(4)));
   double opcode = croissant_js_and(instruction, 127);
-  double destination = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(7) & 31U)), 31);
-  double funct3 = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(12) & 31U)), 7);
-  double sourceA = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(15) & 31U)), 31);
-  double sourceB = croissant_js_and(((uint32_t)(instruction) >> ((uint32_t)(20) & 31U)), 31);
-  double top = ((uint32_t)(instruction) >> ((uint32_t)(25) & 31U));
+  double destination = croissant_js_and(croissant_js_ushr(instruction, 7), 31);
+  double funct3 = croissant_js_and(croissant_js_ushr(instruction, 12), 7);
+  double sourceA = croissant_js_and(croissant_js_ushr(instruction, 15), 31);
+  double sourceB = croissant_js_and(croissant_js_ushr(instruction, 20), 31);
+  double top = croissant_js_ushr(instruction, 25);
   uint64_t left = croissant_native_kernel_ts__x(memory, hart, sourceA);
   uint64_t right = croissant_native_kernel_ts__x(memory, hart, sourceB);
   if (opcode == 3) {

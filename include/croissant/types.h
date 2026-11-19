@@ -14,6 +14,7 @@ typedef struct __bake_c_U64Array __bake_c_U64Array;
 typedef struct croissant_native_memory_ts__TetoMemory croissant_native_memory_ts__TetoMemory;
 
 struct __bake_c_Buffer {
+  uint64_t handle;
   double byteLength;
 };
 
