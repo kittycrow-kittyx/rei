@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 jobs:
+  targets:
+    name: Discover validation targets
+    uses: ./.github/workflows/targets.yml
   source:
     name: Transpile source
     runs-on: ubuntu-latest
@@ -34,8 +37,13 @@ jobs:
             SHA256SUMS
           if-no-files-found: error
   compile:
-    name: Compile
-    needs: source
+    name: Compile (${{ matrix.arch }})
+    needs: [source, targets]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.targets.outputs.matrix) }}
+    env:
+      TARGET: ${{ matrix.target }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -53,16 +61,17 @@ jobs:
           bash scripts/verify-pins.sh
       - name: Compile freshly generated source
         shell: bash
+        env:
+          TARGET_FLAGS: ${{ matrix.flags }}
         run: |
           set -euo pipefail
-          cmake -S . -B build/regenerated-native
-          cmake --build build/regenerated-native --parallel 2
-          for triple in x86_64-unknown-none-elf aarch64-none-elf; do
-            while IFS= read -r -d '' source; do
-              output="build/regenerated-cross/$triple/${source#src/}.o"
-              mkdir -p "$(dirname "$output")"
-              clang --target="$triple" -std=c11 -O1 -ffreestanding -fno-builtin -fno-stack-protector -Werror -Iinclude -c "$source" -o "$output"
-            done < <(find src -type f -name '*.c' -print0)
+          read -r -a target_flags <<< "$TARGET_FLAGS"
+          mapfile -d '' sources < <(find src -type f -name '*.c' -print0 | sort -z)
+          test "${#sources[@]}" -gt 0
+          for source in "${sources[@]}"; do
+            output="build/regenerated-cross/$TARGET/${source#src/}.o"
+            mkdir -p "$(dirname "$output")"
+            clang --target="$TARGET" "${target_flags[@]}" -std=c11 -O1 -ffreestanding -fno-builtin -fno-stack-protector -Werror -Iinclude -c "$source" -o "$output"
           done
       - name: Verify committed source matches regeneration
         run: |
