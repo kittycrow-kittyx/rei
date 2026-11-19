@@ -105,7 +105,7 @@
       "input": "native/kernel.ts",
       "source": "src/native/kernel.c",
       "header": "include/croissant/native/kernel.h",
-      "functions": 194
+      "functions": 197
     },
     {
       "input": "native/start.ts",

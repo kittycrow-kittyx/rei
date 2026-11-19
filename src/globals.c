@@ -189,6 +189,7 @@ uint32_t croissant_native_abi_ts__M_FILE_DESCRIPTOR;
 uint32_t croissant_native_abi_ts__M_FILE_OFFSET;
 uint32_t croissant_native_abi_ts__M_BACKING;
 uint32_t croissant_native_abi_ts__THISTLE_MAP_BACKING_ANONYMOUS;
+uint32_t croissant_native_abi_ts__THISTLE_MAP_BACKING_HOST_FILE;
 uint32_t croissant_native_abi_ts__THISTLE_VFS_INODE_STRIDE;
 uint32_t croissant_native_abi_ts__THISTLE_VFS_INODE_CAPACITY;
 uint32_t croissant_native_abi_ts__THISTLE_VFS_DENTRY_STRIDE;
@@ -514,6 +515,7 @@ void croissant_init_globals(void) {
   croissant_native_abi_ts__M_FILE_OFFSET = 32;
   croissant_native_abi_ts__M_BACKING = 40;
   croissant_native_abi_ts__THISTLE_MAP_BACKING_ANONYMOUS = 0;
+  croissant_native_abi_ts__THISTLE_MAP_BACKING_HOST_FILE = 1;
   croissant_native_abi_ts__THISTLE_VFS_INODE_STRIDE = 64;
   croissant_native_abi_ts__THISTLE_VFS_INODE_CAPACITY = 4096;
   croissant_native_abi_ts__THISTLE_VFS_DENTRY_STRIDE = 24;

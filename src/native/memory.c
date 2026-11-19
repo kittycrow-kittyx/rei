@@ -90,19 +90,19 @@ int64_t croissant_native_memory_ts__loadI64(croissant_native_memory_ts__ThistleM
 
 void croissant_native_memory_ts__storeU8(croissant_native_memory_ts__ThistleMemory memory, uint32_t at, int64_t value) {
   croissant_native_memory_ts__range(memory, at, 1);
-  __bake_c_u8_set((memory).bytes, at, croissant_js_and(__bake_c_number(value), 255));
+  __bake_c_u8_set((memory).bytes, at, __bake_c_number(__bake_c_as_uint_n(8, __bake_c_bigint(value))));
 }
 
 
 void croissant_native_memory_ts__storeU16(croissant_native_memory_ts__ThistleMemory memory, uint32_t at, int64_t value) {
   croissant_native_memory_ts__range(memory, at, 2);
-  __bake_c_view_set_u16((memory).view, at, __bake_c_number(value), true);
+  __bake_c_view_set_u16((memory).view, at, __bake_c_number(__bake_c_as_uint_n(16, __bake_c_bigint(value))), true);
 }
 
 
 void croissant_native_memory_ts__storeU32(croissant_native_memory_ts__ThistleMemory memory, uint32_t at, int64_t value) {
   croissant_native_memory_ts__range(memory, at, 4);
-  __bake_c_view_set_u32((memory).view, at, __bake_c_number(value), true);
+  __bake_c_view_set_u32((memory).view, at, __bake_c_number(__bake_c_as_uint_n(32, __bake_c_bigint(value))), true);
 }
 
 

@@ -1109,6 +1109,54 @@ int64_t croissant_native_kernel_ts__anonymousMap(croissant_native_memory_ts__Thi
 }
 
 
+int64_t croissant_native_kernel_ts__thistleMapHostFile(croissant_native_memory_ts__ThistleMemory memory, uint32_t hart, uint64_t address, uint64_t length, uint64_t protection, uint64_t flags) {
+  double proc = croissant_native_kernel_ts__processForHart(memory, hart);
+  if (proc == croissant_native_kernel_ts__INVALID_POINTER) {
+    return (-INT64_C(3));
+  }
+  double lock = (proc + croissant_native_abi_ts__P_LOCK);
+  if (!croissant_native_kernel_ts__acquire(memory, lock)) {
+    return (-INT64_C(11));
+  }
+  uint64_t result = croissant_native_kernel_ts__anonymousMap(memory, proc, address, length, protection, (flags | UINT64_C(0x20)));
+  if (result >= UINT64_C(0)) {
+    double count = croissant_native_memory_ts__loadU32(memory, (proc + croissant_native_abi_ts__P_MAP_COUNT));
+    croissant_native_memory_ts__storeU32(memory, (croissant_native_kernel_ts__mapAt(memory, proc, (count - 1)) + croissant_native_abi_ts__M_BACKING), croissant_native_abi_ts__THISTLE_MAP_BACKING_HOST_FILE);
+  }
+  croissant_native_kernel_ts__release(memory, lock);
+  return result;
+}
+
+
+int64_t croissant_native_kernel_ts__thistleUnmapHostFile(croissant_native_memory_ts__ThistleMemory memory, uint32_t hart, uint64_t address, uint64_t length) {
+  double proc = croissant_native_kernel_ts__processForHart(memory, hart);
+  if (proc == croissant_native_kernel_ts__INVALID_POINTER) {
+    return (-INT64_C(3));
+  }
+  double lock = (proc + croissant_native_abi_ts__P_LOCK);
+  if (!croissant_native_kernel_ts__acquire(memory, lock)) {
+    return (-INT64_C(11));
+  }
+  uint64_t result = croissant_native_kernel_ts__anonymousUnmap(memory, proc, address, length);
+  croissant_native_kernel_ts__release(memory, lock);
+  return result;
+}
+
+
+bool croissant_native_kernel_ts__overlapsHostFile(croissant_native_memory_ts__ThistleMemory memory, uint32_t proc, uint64_t address, uint64_t length) {
+  double count = croissant_native_memory_ts__loadU32(memory, (proc + croissant_native_abi_ts__P_MAP_COUNT));
+  uint32_t index = 0;
+  while (index < count) {
+    double mapping = croissant_native_kernel_ts__mapAt(memory, proc, index);
+    if (((croissant_native_memory_ts__loadU32(memory, (mapping + croissant_native_abi_ts__M_BACKING)) == croissant_native_abi_ts__THISTLE_MAP_BACKING_HOST_FILE) && (address < croissant_native_memory_ts__loadU64(memory, (mapping + croissant_native_abi_ts__M_END)))) && ((address + length) > croissant_native_memory_ts__loadU64(memory, (mapping + croissant_native_abi_ts__M_ADDRESS)))) {
+      return true;
+    }
+    (index += 1);
+  }
+  return false;
+}
+
+
 int64_t croissant_native_kernel_ts__anonymousUnmap(croissant_native_memory_ts__ThistleMemory memory, uint32_t proc, uint64_t address, uint64_t length) {
   uint64_t top = croissant_native_memory_ts__atomicLoadU64(memory, (proc + croissant_native_abi_ts__P_VIRTUAL_TOP));
   if ((((length == UINT64_C(0)) || (((address & ((croissant_native_kernel_ts__MAP_PAGE - UINT64_C(1))))) != UINT64_C(0))) || (address >= top)) || (length > (top - address))) {
@@ -2950,6 +2998,10 @@ int32_t croissant_native_kernel_ts__unmapSyscall(croissant_native_memory_ts__Thi
   if (!croissant_native_kernel_ts__acquire(memory, lock)) {
     croissant_native_kernel_ts__setPc(memory, hart, (croissant_native_memory_ts__loadU64(memory, (at + croissant_native_abi_ts__H_PC)) - UINT64_C(4)));
     return croissant_native_abi_ts__THISTLE_BATCH_CONTENDED;
+  }
+  if (croissant_native_kernel_ts__overlapsHostFile(memory, proc, croissant_native_word_ts__ux(croissant_native_kernel_ts__x(memory, hart, 10)), croissant_native_word_ts__ux(croissant_native_kernel_ts__x(memory, hart, 11)))) {
+    croissant_native_kernel_ts__release(memory, lock);
+    return croissant_native_kernel_ts__fallbackSyscall(memory, hart);
   }
   uint64_t result = croissant_native_kernel_ts__anonymousUnmap(memory, proc, croissant_native_word_ts__ux(croissant_native_kernel_ts__x(memory, hart, 10)), croissant_native_word_ts__ux(croissant_native_kernel_ts__x(memory, hart, 11)));
   croissant_native_kernel_ts__traceMappingOperation(memory, hart, number, result);

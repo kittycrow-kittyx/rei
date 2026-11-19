@@ -78,6 +78,9 @@ bool croissant_native_kernel_ts__mappingConflict(croissant_native_memory_ts__Thi
 int64_t croissant_native_kernel_ts__replaceFixedMapping(croissant_native_memory_ts__ThistleMemory memory, uint32_t proc, uint64_t candidate, uint64_t size);
 int64_t croissant_native_kernel_ts__findMappingAddress(croissant_native_memory_ts__ThistleMemory memory, uint32_t proc, uint64_t hint, uint64_t size, uint64_t top);
 int64_t croissant_native_kernel_ts__anonymousMap(croissant_native_memory_ts__ThistleMemory memory, uint32_t proc, uint64_t address, uint64_t length, uint64_t protection, uint64_t flagsWide);
+int64_t croissant_native_kernel_ts__thistleMapHostFile(croissant_native_memory_ts__ThistleMemory memory, uint32_t hart, uint64_t address, uint64_t length, uint64_t protection, uint64_t flags);
+int64_t croissant_native_kernel_ts__thistleUnmapHostFile(croissant_native_memory_ts__ThistleMemory memory, uint32_t hart, uint64_t address, uint64_t length);
+bool croissant_native_kernel_ts__overlapsHostFile(croissant_native_memory_ts__ThistleMemory memory, uint32_t proc, uint64_t address, uint64_t length);
 int64_t croissant_native_kernel_ts__anonymousUnmap(croissant_native_memory_ts__ThistleMemory memory, uint32_t proc, uint64_t address, uint64_t length);
 bool croissant_native_kernel_ts__mappingsCover(croissant_native_memory_ts__ThistleMemory memory, uint32_t proc, uint64_t address, uint64_t end);
 int64_t croissant_native_kernel_ts__protectMappings(croissant_native_memory_ts__ThistleMemory memory, uint32_t proc, uint64_t address, uint64_t length, uint64_t protection);
