@@ -6,10 +6,10 @@ Canonical kernel: Thistle
 
 | Component | Git revision |
 |---|---|
-| Thistle | 2362838f1e4ee13072dcd949544e9d004b0b4733 |
-| Bake | b6d6ad1c823f6a06b403a51e7deb87cf159e98f1 |
-| Croissant | 07f172a71a343e2d86ea5c0db920fc8d0df3795b |
-| KITTYX | 6d6dbac796d59e8ea07c52cbcd3a0b7f181da163 |
+| Thistle | 0660abec7685a7500f5129454550f4c0c7703fae |
+| Bake | 1ebd5d2809da7c9a4ad5e5c511522a16ad256ef6 |
+| Croissant | 1fad5eebb02465d0764fcdb532e5aa40c6422398 |
+| KITTYX | e62120659f5ba8de124f2a67f7d2f78eb1e12711 |
 
 The native build generates fresh C and headers from these exact submodule
 revisions in build/native-generated. The generated revision record is copied
