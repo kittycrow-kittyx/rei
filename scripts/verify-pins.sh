@@ -1,38 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-
-for dependency in thistle bake croissant; do
-  case "$dependency" in
-    thistle) label=Thistle ;;
-    bake) label=Bake ;;
-    croissant) label=Croissant ;;
-  esac
-
-  pinned="$(git ls-tree HEAD "$dependency" | awk '$1 == "160000" && $2 == "commit" { print $3 }')"
-  if [[ ! "$pinned" =~ ^[a-f0-9]{40}$ ]]; then
-    echo "Missing pinned Git submodule: $dependency" >&2
-    exit 1
-  fi
-
-  if ! grep -Fq "| $label | $pinned |" docs/provenance.md; then
-    echo "Provenance mismatch: $dependency has gitlink $pinned" >&2
-    exit 1
-  fi
-
-  if ! grep -Fq "path = $dependency" .gitmodules; then
-    echo "Missing .gitmodules path: $dependency" >&2
-    exit 1
-  fi
-
-  if [[ -e "$dependency/.git" ]]; then
-    checked="$(git -C "$dependency" rev-parse HEAD)"
-    if [[ "$checked" != "$pinned" ]]; then
-      echo "Checked out $dependency at $checked, expected $pinned" >&2
-      exit 1
-    fi
-  fi
-
-  printf '%-10s %s\n' "$dependency" "$pinned"
-done
+pins="$(jq -ce --slurpfile releases upstream.releases.json '
+  .dependencies as $pins | $releases[0].dependencies as $releases |
+  if ($pins | length) == 2 and ($releases | length) == 2 and
+    ($pins | map(.path) | sort) == ["croissant","thistle"] and
+    all($pins[]; . as $pin |
+      .direct == true and .repository == ("kittycrow-kittyx/" + .path) and
+      (.commit | test("^[0-9a-f]{40}$")) and
+      ([$releases[] | select(.path == $pin.path and .repository == $pin.repository and .commit == $pin.commit)] | length) == 1)
+  then $pins[] else error("Invalid direct dependency pins") end
+' project.dependencies.json)"
+while IFS= read -r item; do
+  path="$(jq -er .path <<< "$item")"
+  sha="$(jq -er .commit <<< "$item")"
+  test "$(git ls-files -s -- "$path" | awk '$1 == "160000" {print $2}')" = "$sha"
+  test "$(git -C "$path" rev-parse --show-toplevel)" = "$PWD/$path"
+  test "$(git -C "$path" rev-parse HEAD)" = "$sha"
+  test -z "$(git -C "$path" status --porcelain --untracked-files=no)"
+  printf '%s %s\n' "$path" "$sha"
+done <<< "$pins"
+nested="$(git -C croissant ls-tree HEAD bake | awk '$1 == "160000" && $2 == "commit" {print $3}')"
+[[ "$nested" =~ ^[0-9a-f]{40}$ ]]
+test "$(git -C croissant/bake rev-parse --show-toplevel)" = "$PWD/croissant/bake"
+test "$(git -C croissant/bake rev-parse HEAD)" = "$nested"
+test -z "$(git -C croissant/bake status --porcelain --untracked-files=no)"
+printf 'bake %s\n' "$nested"

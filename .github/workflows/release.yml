@@ -1,52 +1,95 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: [Kernel source and build validation]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 concurrency:
-  group: release-${{ github.ref }}
+  group: native-release
   cancel-in-progress: false
 
 jobs:
+  select:
+    name: Validate source
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      VALIDATION_RUN_ID: ${{ github.event.workflow_run.id || '' }}
+    outputs:
+      source: ${{ steps.version.outputs.source }}
+      tag: ${{ steps.version.outputs.tag }}
+      package: ${{ steps.version.outputs.package }}
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+      - name: Validate version
+        id: version
+        run: |
+          set -euo pipefail
+          version="$(cat VERSION)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          tag="v$version"
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          printf 'tag=%s\nsource=%s\n' "$tag" "$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            printf 'package=true\npublish=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$SOURCE_SHA"
+          gh api "repos/$GH_REPO/actions/runs/$VALIDATION_RUN_ID" | jq -e --arg sha "$SOURCE_SHA" --arg repo "$GH_REPO" '.name == "Kernel source and build validation" and .head_sha == $sha and .head_branch == "main" and .head_repository.full_name == $repo and .event == "push" and .status == "completed" and .conclusion == "success"'
+          if gh release view "$tag" --repo "$GH_REPO" >/dev/null 2>&1; then
+            printf 'package=false\npublish=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          ref="$(git ls-remote origin "refs/tags/$tag^{}" | cut -f1)"
+          if [[ -z "$ref" ]]; then ref="$(git ls-remote origin "refs/tags/$tag" | cut -f1)"; fi
+          [[ -z "$ref" || "$ref" == "$SOURCE_SHA" ]]
+          printf 'package=true\npublish=true\n' >> "$GITHUB_OUTPUT"
   targets:
     name: Discover release targets
+    needs: select
+    if: needs.select.outputs.package == 'true'
     uses: ./.github/workflows/targets.yml
+    with:
+      source_sha: ${{ needs.select.outputs.source }}
   build:
     name: Build (${{ matrix.arch }})
-    needs: targets
+    needs: [select, targets]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.targets.outputs.matrix) }}
     env:
+      SOURCE_SHA: ${{ needs.select.outputs.source }}
+      TAG: ${{ needs.select.outputs.tag }}
       TARGET: ${{ matrix.target }}
       ARCH: ${{ matrix.arch }}
       ELF_CLASS: ${{ matrix.elf }}
       MACHINE: ${{ matrix.machine }}
     steps:
-      - name: Checkout
+      - name: Check out source
         uses: actions/checkout@v5
-      - name: Validate Version
-        run: |
-          version="$(cat VERSION)"
-          [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          tag="v$version"
-          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
-            test "$GITHUB_REF_NAME" = "$tag"
-          fi
-          printf 'TAG=%s\n' "$tag" >> "$GITHUB_ENV"
-      - name: Setup Clang
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+      - name: Set up Clang
         run: |
           sudo apt-get update
           sudo apt-get install -y clang llvm cmake
-      - name: Verify Source
-        run: sha256sum -c SHA256SUMS
-      - name: Compile
+      - name: Verify generated source
+        run: bash scripts/verify-source.sh
+      - name: Compile C
         env:
           TARGET_FLAGS: ${{ matrix.flags }}
         run: |
@@ -58,20 +101,21 @@ jobs:
             -DCMAKE_C_FLAGS="$TARGET_FLAGS -Werror" \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build/release --parallel 2
-      - name: Stage Distribution
+      - name: Stage distribution
         env:
           TARGET_FLAGS: ${{ matrix.flags }}
         run: |
           mkdir -p package/lib build/verify
-          mapfile -d '' objects < <(find build/release/CMakeFiles/rei_kernel.dir -type f -name '*.o' -print0 | sort -z)
+          mapfile -d '' objects < <(find build/release/CMakeFiles/rei_kernel.dir -type f \( -name '*.o' -o -name '*.obj' \) -print0 | sort -z)
           test "${#objects[@]}" -gt 0
           llvm-ar rcsD package/lib/librei.a "${objects[@]}"
           test -s package/lib/librei.a
-          cp -R include croissant.manifest.json LICENSE VERSION package/
+          cp -R include croissant.manifest.json LICENSE VERSION docs/provenance.md upstream.releases.json package/
+          printf '%s\n' "$SOURCE_SHA" > package/RELEASE_COMMIT
           clang --version > package/COMPILER.txt
           printf '\nTarget: %s\nTarget flags: %s\n' "$TARGET" "$TARGET_FLAGS" >> package/COMPILER.txt
           for i in "${!objects[@]}"; do cp "${objects[$i]}" "build/verify/$i.o"; done
-      - name: Record Upstream Target Policy
+      - name: Record upstream target policy
         env:
           TARGET_POLICY: ${{ needs.targets.outputs.matrix }}
           TARGET_REVISION: ${{ needs.targets.outputs.revision }}
@@ -80,7 +124,7 @@ jobs:
           jq . <<< "$TARGET_POLICY" > package/TARGETS.json
           jq . <<< "$TARGET_PROFILE" > package/TARGET.json
           printf 'kittycrow-kittyx/croissant@%s\n' "$TARGET_REVISION" > package/TARGETS_REVISION
-      - name: Verify Architecture
+      - name: Verify architecture
         run: |
           shopt -s nullglob
           objects=(build/verify/*.o)
@@ -92,14 +136,14 @@ jobs:
             test "$machine" = "$MACHINE"
             test "$class" = "$ELF_CLASS"
           done
-      - name: Package
+      - name: Package distribution
         run: |
           mkdir -p dist
           tar --sort=name --mtime="@$(git show -s --format=%ct HEAD)" \
             --owner=0 --group=0 --numeric-owner \
             -czf "dist/rei-$TAG-$ARCH.tar.gz" -C package .
           tar -tzf "dist/rei-$TAG-$ARCH.tar.gz"
-      - name: Upload Release Artefact
+      - name: Upload release artefact
         uses: actions/upload-artifact@v6
         with:
           name: rei-${{ matrix.arch }}
@@ -107,20 +151,30 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Publish Release
-    if: github.event_name == 'push' && github.ref_type == 'tag'
-    needs: [targets, build]
+    name: Publish release
+    if: needs.select.outputs.publish == 'true'
+    needs: [select, targets, build]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_SHA: ${{ needs.select.outputs.source }}
+      TAG: ${{ needs.select.outputs.tag }}
     steps:
-      - name: Download Release Artefacts
+      - name: Check out source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+      - name: Download release artefacts
         uses: actions/download-artifact@v7
         with:
           pattern: rei-*
           path: release
           merge-multiple: true
-      - name: Generate Checksums
+      - name: Generate checksums
         env:
           TARGET_POLICY: ${{ needs.targets.outputs.matrix }}
         run: |
@@ -130,7 +184,7 @@ jobs:
           test "${#architectures[@]}" -gt 0
           expected=()
           for arch in "${architectures[@]}"; do
-            archive="rei-$GITHUB_REF_NAME-$arch.tar.gz"
+            archive="rei-$TAG-$arch.tar.gz"
             test -s "$archive"
             expected+=("$archive")
           done
@@ -139,10 +193,51 @@ jobs:
           test "${#archives[@]}" -eq "${#expected[@]}"
           sha256sum "${expected[@]}" > SHA256SUMS
           sha256sum -c SHA256SUMS
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+      - name: Publish GitHub release
         run: |
-          gh release create "$GITHUB_REF_NAME" release/*.tar.gz release/SHA256SUMS \
-            --verify-tag --generate-notes --title "Rei $GITHUB_REF_NAME"
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$SOURCE_SHA"
+          (cd release && sha256sum -c SHA256SUMS)
+          for archive in release/*.tar.gz; do
+            test "$(tar -xOf "$archive" ./RELEASE_COMMIT)" = "$SOURCE_SHA"
+          done
+          if gh release view "$TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
+            exit 0
+          fi
+          ref="$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)"
+          if [[ -z "$ref" ]]; then ref="$(git ls-remote origin "refs/tags/$TAG" | cut -f1)"; fi
+          if [[ -z "$ref" ]]; then
+            git -c user.name=github-actions -c user.email=41898282+github-actions[bot]@users.noreply.github.com tag -a "$TAG" "$SOURCE_SHA" -m "Rei $TAG"
+            git push origin "refs/tags/$TAG"
+          else
+            test "$ref" = "$SOURCE_SHA"
+          fi
+          gh release create "$TAG" release/*.tar.gz release/SHA256SUMS --repo "$GH_REPO" --verify-tag --generate-notes --title "Rei $TAG"
+          download="$(mktemp -d)"
+          gh release download "$TAG" --repo "$GH_REPO" --pattern '*.tar.gz' --pattern SHA256SUMS --dir "$download"
+          (cd "$download" && sha256sum -c SHA256SUMS)
+          for file in release/*; do cmp "$file" "$download/${file##*/}"; done
+          ref="$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)"
+          test "$ref" = "$SOURCE_SHA"
+
+  consolidate:
+    name: Consolidate existing v2.2.0 release
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+      VALIDATION_RUN_ID: ${{ github.event.workflow_run.id }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+      - name: Verify and consolidate existing release
+        run: bash scripts/ci/consolidate-release.sh

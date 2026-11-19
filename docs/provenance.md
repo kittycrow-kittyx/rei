@@ -1,11 +1,9 @@
 # Source provenance
 
-Canonical kernel: Thistle
-
 | Component | Git revision |
 |---|---|
-| Thistle | a2be03338126ae7afd6ecb6cd4a18c30ae583459 |
-| Bake | 57127ffd6e2d09dae416e2a8220a42a407095e5e |
-| Croissant | d759f6c571ee404ff6ce15f75fe5f7d1884bef05 |
+| Thistle | 76932c85c4db2eb481345aafe8611e6f53de9d85 |
+| Bake | 30f7c767584737bf001d2f99b7d303b809bb4f0f |
+| Croissant | 7625aeb83dddfb9ce3a0afeb7be67378c48ed66e |
 
-Generated C source and headers must be regenerated and verified against these exact revisions. Compiled objects are not part of the committed snapshot.
+Generated source uses the verified releases in upstream.releases.json. Bake is inherited through Croissant.

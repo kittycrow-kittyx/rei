@@ -11,19 +11,34 @@ jobs:
   targets:
     name: Discover validation targets
     uses: ./.github/workflows/targets.yml
+    with:
+      source_sha: ${{ github.sha }}
   source:
     name: Transpile source
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - name: Check out source
+        uses: actions/checkout@v5
         with:
           submodules: recursive
-      - uses: oven-sh/setup-bun@v2
-      - uses: actions/setup-node@v5
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-      - name: Transpile source from pinned toolchain
-        run: bash scripts/regenerate.sh
+          bun-version: 1.4.5
+      - name: Verify build scripts
+        run: for script in scripts/*.sh; do bash -n "$script" || exit; done
+      - name: Verify upstream pins
+        run: bash scripts/verify-pins.sh
+      - name: Download upstream releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/fetch-upstream.sh
+      - name: Install upstream dependencies
+        run: |
+          bun install --cwd build/upstream/croissant --frozen-lockfile
+          bun install --cwd build/upstream/croissant/bake --frozen-lockfile
+      - name: Transpile source
+        run: bash scripts/regenerate.sh --source-only
       - name: Upload generated source
         uses: actions/upload-artifact@v6
         with:
@@ -34,6 +49,7 @@ jobs:
             CMakeLists.txt
             croissant.manifest.json
             docs/bake-manifest.json
+            docs/provenance.md
             SHA256SUMS
           if-no-files-found: error
   compile:
@@ -46,7 +62,8 @@ jobs:
       TARGET: ${{ matrix.target }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - name: Check out source
+        uses: actions/checkout@v5
       - name: Remove old generated source
         run: rm -rf src include
       - name: Download generated source
@@ -55,11 +72,8 @@ jobs:
           name: rei-generated-source
           path: .
       - name: Verify generated source
-        run: |
-          test -z "$(git ls-files -- dist platform '*.o' '*.a' '*.so' '*.elf' '*.img' '*.bin' '*.wasm' '*.rlib')"
-          sha256sum -c SHA256SUMS
-          bash scripts/verify-pins.sh
-      - name: Compile freshly generated source
+        run: bash scripts/verify-source.sh
+      - name: Compile C
         shell: bash
         env:
           TARGET_FLAGS: ${{ matrix.flags }}
@@ -75,5 +89,5 @@ jobs:
           done
       - name: Verify committed source matches regeneration
         run: |
-          git add -A -- src include CMakeLists.txt croissant.manifest.json docs/bake-manifest.json SHA256SUMS
+          git add -A -- src include CMakeLists.txt croissant.manifest.json docs/bake-manifest.json docs/provenance.md SHA256SUMS
           git diff --cached --exit-code

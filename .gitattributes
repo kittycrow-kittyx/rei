@@ -1,0 +1,6 @@
+# Shell is build tooling rather than kernel implementation.
+*.sh linguist-detectable=false
+
+# Keep the native C build configuration in the language statistics.
+CMakeLists.txt linguist-language=CMake linguist-detectable=true
+*.cmake linguist-language=CMake linguist-detectable=true
