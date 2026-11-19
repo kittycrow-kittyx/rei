@@ -1,47 +1,19 @@
 # Building Rei
 
-## Pinned dependencies
-
-After cloning Rei, initialise its Git submodules:
-
-```sh
-git submodule update --init --recursive
-bash scripts/verify-pins.sh
-```
-
-`thistle/`, `bake/` and `croissant/` are pinned to the precise Git
-revisions that produced the initial generated snapshot. Upstream `main`
-moving must not silently change a Rei build. Access to the private
-Croissant repository is required to initialise that submodule.
-
-## Rebuild committed C
-
-The existing generated sources and native objects are build snapshots.
-To compile the currently committed C without regenerating it:
+Compile the checked-in C without initialising the generator submodules:
 
 ```sh
 cmake -S . -B build
-cmake --build build --parallel
+cmake --build build --parallel 2
 ```
 
-To regenerate from the pinned TypeScript source, use:
+To regenerate the source from its pinned dependencies:
 
 ```sh
+git submodule update --init --recursive
 bash scripts/regenerate.sh
 ```
 
-The regeneration script builds Bake and Croissant, performs
-`Bake --target=clang --engine=host`, emits a modular C tree, refreshes
-only previously generated `src/` and `include/` files, recompiles
-the native objects and updates the snapshot checksums.
+Generation ends at C source, headers, CMake configuration and manifests. It does not compile kernel objects. GitHub Actions regenerates the source, uploads the source snapshot and checks for differences. Review generated changes before committing them with their corresponding pins.
 
-Run it on a clean working tree. Review all generated changes before
-committing them. Submodule updates and regenerated outputs should be
-reviewed together.
-
-## Current boundary
-
-The build produces relocatable object files, not a linked Rei image.
-`__bake_c_*` and `croissant_js_*` calls still require a native
-runtime implementation, followed by architecture-specific platform
-integration and linking.
+Platform-specific runtimes, drivers and boot images are outside main. Compilation outputs remain ignored by Git.

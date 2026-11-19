@@ -5,3 +5,10 @@
 /compile_commands.json
 *.tmp
 *.bak
+
+/dist/
+*.o
+*.a
+*.elf
+*.img
+*.bin
