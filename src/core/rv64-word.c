@@ -18,25 +18,30 @@ int32_t croissant_core_rv64_word_ts__rv64RegisterWordValid(uint32_t funct3, uint
 }
 
 
+int64_t croissant_core_rv64_word_ts__rv64MultiplyDivideWord(uint32_t funct3, int64_t left, int64_t right) {
+  if (funct3 == 0) {
+    return croissant_core_rv64_numbers_ts__sx((croissant_core_rv64_numbers_ts__sx(left, 32) * croissant_core_rv64_numbers_ts__sx(right, 32)), 32);
+  }
+  if (funct3 == 4) {
+    return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64DivideSigned(left, right, 32), 32);
+  }
+  if (funct3 == 5) {
+    return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64DivideUnsigned(croissant_core_rv64_numbers_ts__u32word(left), croissant_core_rv64_numbers_ts__u32word(right), 32), 32);
+  }
+  if (funct3 == 6) {
+    return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64RemainderSigned(left, right, 32), 32);
+  }
+  if (funct3 == 7) {
+    return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64RemainderUnsigned(croissant_core_rv64_numbers_ts__u32word(left), croissant_core_rv64_numbers_ts__u32word(right), 32), 32);
+  }
+  return UINT64_C(0);
+}
+
+
 int64_t croissant_core_rv64_word_ts__rv64RegisterWordValue(uint32_t funct3, uint32_t top, int64_t left, int64_t right) {
   uint64_t shift = (croissant_core_rv64_numbers_ts__ux(right) & UINT64_C(31));
   if (top == 1) {
-    if (funct3 == 0) {
-      return croissant_core_rv64_numbers_ts__sx((croissant_core_rv64_numbers_ts__sx(left, 32) * croissant_core_rv64_numbers_ts__sx(right, 32)), 32);
-    }
-    if (funct3 == 4) {
-      return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64DivideSigned(left, right, 32), 32);
-    }
-    if (funct3 == 5) {
-      return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64DivideUnsigned(croissant_core_rv64_numbers_ts__u32word(left), croissant_core_rv64_numbers_ts__u32word(right), 32), 32);
-    }
-    if (funct3 == 6) {
-      return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64RemainderSigned(left, right, 32), 32);
-    }
-    if (funct3 == 7) {
-      return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64RemainderUnsigned(croissant_core_rv64_numbers_ts__u32word(left), croissant_core_rv64_numbers_ts__u32word(right), 32), 32);
-    }
-    return UINT64_C(0);
+    return croissant_core_rv64_word_ts__rv64MultiplyDivideWord(funct3, left, right);
   }
   if (funct3 == 0) {
     return croissant_core_rv64_numbers_ts__sx(((top == 0) ? (left + right) : (left - right)), 32);

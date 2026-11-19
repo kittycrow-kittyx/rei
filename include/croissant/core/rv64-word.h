@@ -4,6 +4,7 @@
 #include "croissant/types.h"
 
 int32_t croissant_core_rv64_word_ts__rv64RegisterWordValid(uint32_t funct3, uint32_t top);
+int64_t croissant_core_rv64_word_ts__rv64MultiplyDivideWord(uint32_t funct3, int64_t left, int64_t right);
 int64_t croissant_core_rv64_word_ts__rv64RegisterWordValue(uint32_t funct3, uint32_t top, int64_t left, int64_t right);
 int32_t croissant_core_rv64_word_ts__rv64ImmediateWordValid(uint32_t funct3, uint32_t instruction);
 int64_t croissant_core_rv64_word_ts__rv64ImmediateWordValue(uint32_t funct3, uint32_t instruction, int64_t left);

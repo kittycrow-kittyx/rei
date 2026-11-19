@@ -4,5 +4,6 @@
 #include "croissant/types.h"
 
 int32_t croissant_core_rv64_register_ts__rv64RegisterValid(uint32_t funct3, uint32_t top);
+int64_t croissant_core_rv64_register_ts__rv64MultiplyDivide(uint32_t funct3, int64_t left, int64_t right);
 int64_t croissant_core_rv64_register_ts__rv64RegisterValue(uint32_t funct3, uint32_t top, int64_t left, int64_t right);
 #endif /* CROISSANT_MODULE_CORE_RV64_REGISTER_H */

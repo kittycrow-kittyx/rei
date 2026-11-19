@@ -7,6 +7,8 @@ add_library(rei_kernel OBJECT
   src/core/native-types.c
   src/native/types.c
   src/native/abi.c
+  src/native/memory.c
+  src/native/image-range.c
   src/core/rv64-branch.c
   src/core/rv64-numbers.c
   src/vm/rv64-immediate.c
@@ -15,7 +17,7 @@ add_library(rei_kernel OBJECT
   src/core/rv64-immediate-op.c
   src/core/rv64-register.c
   src/core/rv64-fclass.c
-  src/native/memory.c
+  src/core/rv64-decode.c
   src/native/word.c
   src/native/vfs.c
   src/native/kernel.c

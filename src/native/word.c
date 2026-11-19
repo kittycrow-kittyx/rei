@@ -45,27 +45,27 @@ uint32_t croissant_native_word_ts__wordToPtr(uint64_t value) {
 }
 
 
-float croissant_native_word_ts__bitsToF32(uint64_t value) {
-  __bake_c_view_set_u32(croissant_native_word_ts__floatView, 0, __bake_c_number((value & croissant_native_word_ts__MASK32)), true);
-  return __bake_c_view_get_f32(croissant_native_word_ts__floatView, 0, true);
+float croissant_native_word_ts__bitsToF32(croissant_native_memory_ts__ThistleMemory memory, uint32_t scratch, uint64_t value) {
+  __bake_c_view_set_u32((memory).view, scratch, __bake_c_number((value & croissant_native_word_ts__MASK32)), true);
+  return __bake_c_view_get_f32((memory).view, scratch, true);
 }
 
 
-double croissant_native_word_ts__bitsToF64(uint64_t value) {
-  __bake_c_view_set_u64(croissant_native_word_ts__floatView, 0, croissant_native_word_ts__ux(value), true);
-  return __bake_c_view_get_f64(croissant_native_word_ts__floatView, 0, true);
+double croissant_native_word_ts__bitsToF64(croissant_native_memory_ts__ThistleMemory memory, uint32_t scratch, uint64_t value) {
+  __bake_c_view_set_u64((memory).view, scratch, croissant_native_word_ts__ux(value), true);
+  return __bake_c_view_get_f64((memory).view, scratch, true);
 }
 
 
-uint64_t croissant_native_word_ts__f32ToBits(double value) {
-  __bake_c_view_set_f32(croissant_native_word_ts__floatView, 0, __bake_c_f32_round(value), true);
-  return __bake_c_bigint(__bake_c_view_get_u32(croissant_native_word_ts__floatView, 0, true));
+uint64_t croissant_native_word_ts__f32ToBits(croissant_native_memory_ts__ThistleMemory memory, uint32_t scratch, double value) {
+  __bake_c_view_set_f32((memory).view, scratch, __bake_c_f32_round(value), true);
+  return __bake_c_bigint(__bake_c_view_get_u32((memory).view, scratch, true));
 }
 
 
-uint64_t croissant_native_word_ts__f64ToBits(double value) {
-  __bake_c_view_set_f64(croissant_native_word_ts__floatView, 0, value, true);
-  return __bake_c_view_get_u64(croissant_native_word_ts__floatView, 0, true);
+uint64_t croissant_native_word_ts__f64ToBits(croissant_native_memory_ts__ThistleMemory memory, uint32_t scratch, double value) {
+  __bake_c_view_set_f64((memory).view, scratch, value, true);
+  return __bake_c_view_get_u64((memory).view, scratch, true);
 }
 
 

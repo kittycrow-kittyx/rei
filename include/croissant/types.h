@@ -11,7 +11,7 @@ typedef struct __bake_c_ExternalMemory __bake_c_ExternalMemory;
 typedef struct __bake_c_U8Array __bake_c_U8Array;
 typedef struct __bake_c_I32Array __bake_c_I32Array;
 typedef struct __bake_c_U64Array __bake_c_U64Array;
-typedef struct croissant_native_memory_ts__TetoMemory croissant_native_memory_ts__TetoMemory;
+typedef struct croissant_native_memory_ts__ThistleMemory croissant_native_memory_ts__ThistleMemory;
 
 struct __bake_c_Buffer {
   uint64_t handle;
@@ -41,7 +41,7 @@ struct __bake_c_View {
   __bake_c_Buffer buffer;
 };
 
-struct croissant_native_memory_ts__TetoMemory {
+struct croissant_native_memory_ts__ThistleMemory {
   __bake_c_Buffer buffer;
   __bake_c_U8Array bytes;
   __bake_c_View view;

@@ -1,12 +1,11 @@
-# Build provenance
+# Source provenance
 
 Canonical kernel: Thistle
 
 | Component | Git revision |
 |---|---|
-| Thistle | 4d0f3d6401772a48298972100e43dec1909312d6 |
-| Bake | cae1e7b9547c8d865fd117ec629bfdc8dfdcca62 |
-| Croissant | 64bbdbb96d381a63bb2bb4c45e04652dfc50d143 |
+| Thistle | a2be03338126ae7afd6ecb6cd4a18c30ae583459 |
+| Bake | 57127ffd6e2d09dae416e2a8220a42a407095e5e |
+| Croissant | d759f6c571ee404ff6ce15f75fe5f7d1884bef05 |
 
-
-These are the candidate toolchain pins; the committed C source and headers must be regenerated and verified before merging. Compiled objects are not part of the committed snapshot.
+Generated C source and headers must be regenerated and verified against these exact revisions. Compiled objects are not part of the committed snapshot.

@@ -1,4 +1,4 @@
-name: Rei source and build validation
+name: Kernel source and build validation
 on:
   push:
     branches: [main]
@@ -9,18 +9,20 @@ permissions:
   contents: read
 jobs:
   source:
+    name: Transpile source
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
       - uses: oven-sh/setup-bun@v2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Regenerate C source from pinned toolchain
+      - name: Transpile source from pinned toolchain
         run: bash scripts/regenerate.sh
-      - uses: actions/upload-artifact@v4
+      - name: Upload generated source
+        uses: actions/upload-artifact@v6
         with:
           name: rei-generated-source
           path: |
@@ -31,7 +33,25 @@ jobs:
             docs/bake-manifest.json
             SHA256SUMS
           if-no-files-found: error
-      - name: Build freshly regenerated C for host and bare-metal targets
+  compile:
+    name: Compile
+    needs: source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Remove old generated source
+        run: rm -rf src include
+      - name: Download generated source
+        uses: actions/download-artifact@v7
+        with:
+          name: rei-generated-source
+          path: .
+      - name: Verify generated source
+        run: |
+          test -z "$(git ls-files -- dist platform '*.o' '*.a' '*.so' '*.elf' '*.img' '*.bin' '*.wasm' '*.rlib')"
+          sha256sum -c SHA256SUMS
+          bash scripts/verify-pins.sh
+      - name: Compile freshly generated source
         shell: bash
         run: |
           set -euo pipefail
@@ -48,28 +68,3 @@ jobs:
         run: |
           git add -A -- src include CMakeLists.txt croissant.manifest.json docs/bake-manifest.json SHA256SUMS
           git diff --cached --exit-code
-  compile:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Verify source-only checkout
-        run: |
-          test -z "$(git ls-files -- dist platform '*.o' '*.a' '*.so' '*.elf' '*.img' '*.bin' '*.wasm' '*.rlib')"
-          sha256sum -c SHA256SUMS
-          bash scripts/verify-pins.sh
-      - name: Compile without publishing binaries to Git
-        run: |
-          cmake -S . -B build
-          cmake --build build --parallel 2
-          git diff --exit-code
-      - name: Validate freestanding cross-compilation
-        shell: bash
-        run: |
-          set -euo pipefail
-          for triple in x86_64-unknown-none-elf aarch64-none-elf; do
-            while IFS= read -r -d '' source; do
-              output="build/cross/$triple/${source#src/}.o"
-              mkdir -p "$(dirname "$output")"
-              clang --target="$triple" -std=c11 -O1 -ffreestanding -fno-builtin -fno-stack-protector -Werror -Iinclude -c "$source" -o "$output"
-            done < <(find src -type f -name '*.c' -print0)
-          done

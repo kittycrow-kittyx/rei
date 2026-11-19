@@ -8,16 +8,16 @@ int64_t croissant_core_rv64_fclass_ts__rv64FloatClass(uint64_t raw, int32_t bits
   uint64_t exponent = ((raw >> fractionBits) & ((((UINT64_C(1) << exponentBits)) - UINT64_C(1))));
   uint64_t fraction = (raw & ((((UINT64_C(1) << fractionBits)) - UINT64_C(1))));
   uint64_t all = (((UINT64_C(1) << exponentBits)) - UINT64_C(1));
+  if ((exponent == all) && (fraction == UINT64_C(0))) {
+    return (UINT64_C(1) << (((sign != UINT64_C(0)) ? UINT64_C(0) : UINT64_C(7))));
+  }
   if (exponent == all) {
-    if (fraction == UINT64_C(0)) {
-      return (UINT64_C(1) << (((sign != UINT64_C(0)) ? UINT64_C(0) : UINT64_C(7))));
-    }
     return (UINT64_C(1) << (((((fraction & ((UINT64_C(1) << ((fractionBits - UINT64_C(1))))))) != UINT64_C(0)) ? UINT64_C(9) : UINT64_C(8))));
   }
+  if ((exponent == UINT64_C(0)) && (fraction == UINT64_C(0))) {
+    return (UINT64_C(1) << (((sign != UINT64_C(0)) ? UINT64_C(3) : UINT64_C(4))));
+  }
   if (exponent == UINT64_C(0)) {
-    if (fraction == UINT64_C(0)) {
-      return (UINT64_C(1) << (((sign != UINT64_C(0)) ? UINT64_C(3) : UINT64_C(4))));
-    }
     return (UINT64_C(1) << (((sign != UINT64_C(0)) ? UINT64_C(2) : UINT64_C(5))));
   }
   return (UINT64_C(1) << (((sign != UINT64_C(0)) ? UINT64_C(1) : UINT64_C(6))));

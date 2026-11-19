@@ -12,34 +12,39 @@ int32_t croissant_core_rv64_register_ts__rv64RegisterValid(uint32_t funct3, uint
 }
 
 
+int64_t croissant_core_rv64_register_ts__rv64MultiplyDivide(uint32_t funct3, int64_t left, int64_t right) {
+  if (funct3 == 0) {
+    return croissant_core_rv64_numbers_ts__sx((left * right), 64);
+  }
+  if (funct3 == 1) {
+    return croissant_core_rv64_arithmetic_ts__rv64MulHighSigned(left, right);
+  }
+  if (funct3 == 2) {
+    return croissant_core_rv64_arithmetic_ts__rv64MulHighSignedUnsigned(left, croissant_core_rv64_numbers_ts__ux(right));
+  }
+  if (funct3 == 3) {
+    return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64MulHighUnsigned(croissant_core_rv64_numbers_ts__ux(left), croissant_core_rv64_numbers_ts__ux(right)), 64);
+  }
+  if (funct3 == 4) {
+    return croissant_core_rv64_arithmetic_ts__rv64DivideSigned(left, right, 64);
+  }
+  if (funct3 == 5) {
+    return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64DivideUnsigned(croissant_core_rv64_numbers_ts__ux(left), croissant_core_rv64_numbers_ts__ux(right), 64), 64);
+  }
+  if (funct3 == 6) {
+    return croissant_core_rv64_arithmetic_ts__rv64RemainderSigned(left, right, 64);
+  }
+  if (funct3 == 7) {
+    return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64RemainderUnsigned(croissant_core_rv64_numbers_ts__ux(left), croissant_core_rv64_numbers_ts__ux(right), 64), 64);
+  }
+  return UINT64_C(0);
+}
+
+
 int64_t croissant_core_rv64_register_ts__rv64RegisterValue(uint32_t funct3, uint32_t top, int64_t left, int64_t right) {
   uint64_t shift = (croissant_core_rv64_numbers_ts__ux(right) & UINT64_C(63));
   if (top == 1) {
-    if (funct3 == 0) {
-      return croissant_core_rv64_numbers_ts__sx((left * right), 64);
-    }
-    if (funct3 == 1) {
-      return croissant_core_rv64_arithmetic_ts__rv64MulHighSigned(left, right);
-    }
-    if (funct3 == 2) {
-      return croissant_core_rv64_arithmetic_ts__rv64MulHighSignedUnsigned(left, croissant_core_rv64_numbers_ts__ux(right));
-    }
-    if (funct3 == 3) {
-      return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64MulHighUnsigned(croissant_core_rv64_numbers_ts__ux(left), croissant_core_rv64_numbers_ts__ux(right)), 64);
-    }
-    if (funct3 == 4) {
-      return croissant_core_rv64_arithmetic_ts__rv64DivideSigned(left, right, 64);
-    }
-    if (funct3 == 5) {
-      return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64DivideUnsigned(croissant_core_rv64_numbers_ts__ux(left), croissant_core_rv64_numbers_ts__ux(right), 64), 64);
-    }
-    if (funct3 == 6) {
-      return croissant_core_rv64_arithmetic_ts__rv64RemainderSigned(left, right, 64);
-    }
-    if (funct3 == 7) {
-      return croissant_core_rv64_numbers_ts__sx(croissant_core_rv64_arithmetic_ts__rv64RemainderUnsigned(croissant_core_rv64_numbers_ts__ux(left), croissant_core_rv64_numbers_ts__ux(right), 64), 64);
-    }
-    return UINT64_C(0);
+    return croissant_core_rv64_register_ts__rv64MultiplyDivide(funct3, left, right);
   }
   if (funct3 == 0) {
     return croissant_core_rv64_numbers_ts__sx(((top == 0) ? (left + right) : (left - right)), 64);

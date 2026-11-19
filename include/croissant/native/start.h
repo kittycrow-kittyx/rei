@@ -3,6 +3,6 @@
 #define CROISSANT_MODULE_NATIVE_START_H
 #include "croissant/types.h"
 
-uint32_t croissant_native_start_ts__startupEntry(croissant_native_memory_ts__TetoMemory memory, uint32_t at, uint32_t end);
-int32_t croissant_native_start_ts__tetoBuildInitialStack(croissant_native_memory_ts__TetoMemory memory, uint32_t hart, uint32_t startup, uint32_t startupLength, uint32_t stackBytes);
+uint32_t croissant_native_start_ts__startupEntry(croissant_native_memory_ts__ThistleMemory memory, uint32_t at, uint32_t end);
+int32_t croissant_native_start_ts__thistleBuildInitialStack(croissant_native_memory_ts__ThistleMemory memory, uint32_t hart, uint32_t startup, uint32_t startupLength, uint32_t stackBytes);
 #endif /* CROISSANT_MODULE_NATIVE_START_H */
